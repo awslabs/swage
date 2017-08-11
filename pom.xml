@@ -21,6 +21,10 @@
 
     <modules>
         <module>disseminating-executors</module>
+        <module>type-safe</module>
+        <module>thread-context</module>
+        <module>metrics-api</module>
+        <module>metrics-core</module>
     </modules>
 
     <properties>
