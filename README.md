@@ -1,4 +1,4 @@
-# swage
+# Swage
 
 Swage is a collection of libraries useful for developing and running services.
 
