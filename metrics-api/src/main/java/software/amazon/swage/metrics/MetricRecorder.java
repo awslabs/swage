@@ -50,17 +50,6 @@ import software.amazon.swage.collection.TypedMap;
  * and so will be ignored/swallowed. Implementations are free to log or take
  * other appropriate action.
  *
- * <p>In terms of the previous CoralMetrics API, the MetricRecorder carries the
- * functionality of both a MetricsFactory and a Reporter.  Where the old Reporter
- * would be a single-use object per metrics instance (eg per request) this
- * recorder can and should be shared - it has the same lifecycle as the old
- * MetricsFactory.  It also takes over the job of managing creation of new
- * metric contexts, as was previously done with newMetric() on MetricsFactory.
- * The Context object replaces the previous Metric object for carrying metric context.
- * Having a thread-safe MetricRecorder avoids the excessive objects and
- * unpleasant synchronization hoops of the old Reporters.  Using metrics in a
- * multi-threaded environment becomes much less error prone.
- *
  * Usage
  * <pre>
  * {@code
@@ -107,9 +96,6 @@ public abstract class MetricRecorder {
      * a recorder requires in a context and the context that provides it.
      * Convenience functions are provided to call methods on the recorder with
      * this context.
-     *
-     * In the previous world of CoralMetrics, this context was carried implicitly
-     * with the Metrics object.  One query log entry would be one context.
      *
      * TODO: provide a childContext() mechanism?
      */
