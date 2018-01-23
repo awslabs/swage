@@ -103,7 +103,7 @@ public class CloudWatchRecorder extends MetricRecorder {
         try {
             this.sendAggregatedData();
         } catch (Throwable t) {
-            log.fatal("CloudWatch recorder encountered an unrecoverable error and will stop", t);
+            log.error("CloudWatch recorder encountered an unrecoverable error and will stop", t);
             throw t;
         }
     };
@@ -246,7 +246,7 @@ public class CloudWatchRecorder extends MetricRecorder {
     }
 
     /**
-     * Single that the recorder should shutdown.
+     * Signal that the recorder should shutdown.
      * Queued up metric events will be flushed, and this method will block
      * until all pending ones are sent or it loses patience and times out.
      *
