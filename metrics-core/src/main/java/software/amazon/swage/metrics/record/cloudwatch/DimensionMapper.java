@@ -115,9 +115,6 @@ public class DimensionMapper {
     {
         this.globalDimensions = new HashSet<>(globalDimensions);
         this.filterMap = new HashMap<>(filterMap);
-        for (Map.Entry<Metric, Set<TypedMap.Key>> e : this.filterMap.entrySet()) {
-            e.getValue().addAll(globalDimensions);
-        }
     }
 
     /**
@@ -139,7 +136,7 @@ public class DimensionMapper {
             dimensionKeys = Collections.emptySet();
         }
 
-        List<Dimension> dimensions = new ArrayList<>(globalDimensions.size() + dimensionKeys.size());
+        Set<Dimension> dimensions = new HashSet<>(globalDimensions.size() + dimensionKeys.size());
 
         for (TypedMap.Key k : globalDimensions) {
             Dimension d = new Dimension();
@@ -148,7 +145,6 @@ public class DimensionMapper {
             dimensions.add(d);
         }
 
-        //TODO: cull duplicate entries?
         for (TypedMap.Key k : dimensionKeys) {
             Dimension d = new Dimension();
             d.setName(k.name);
@@ -156,7 +152,7 @@ public class DimensionMapper {
             dimensions.add(d);
         }
 
-        return dimensions;
+        return new ArrayList<>(dimensions);
     }
 
 }
