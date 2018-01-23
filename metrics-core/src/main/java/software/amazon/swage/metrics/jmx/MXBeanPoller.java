@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Sensors are not required to pull data from MBeans, but are designed to do so.
  *
  */
-class MXBeanPoller {
+public class MXBeanPoller {
 
     private static final Logger log = LogManager.getLogger(MXBeanPoller.class);
 
