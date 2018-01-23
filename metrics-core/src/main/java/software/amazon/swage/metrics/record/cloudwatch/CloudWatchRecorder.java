@@ -99,6 +99,14 @@ public class CloudWatchRecorder extends MetricRecorder {
                 .build();
     }
 
+    private final Runnable sendAggregatedDataRunnable = () -> {
+        try {
+            this.sendAggregatedData();
+        } catch (Throwable t) {
+            log.fatal("CloudWatch recorder encountered an unrecoverable error and will stop", t);
+            throw t;
+        }
+    };
 
     private final AmazonCloudWatch metricsClient;
     private final String namespace;
@@ -231,14 +239,14 @@ public class CloudWatchRecorder extends MetricRecorder {
 
         int initialDelay = (jitter * 1000) + (publishFrequencySeconds * 1000);
 
-        publishExecutor.scheduleAtFixedRate(this::sendAggregatedData,
+        publishExecutor.scheduleAtFixedRate(sendAggregatedDataRunnable,
                                             initialDelay,
                                             publishFrequencySeconds * 1000,
                                             TimeUnit.MILLISECONDS);
     }
 
     /**
-     * Signal that the recorder should shutdown.
+     * Single that the recorder should shutdown.
      * Queued up metric events will be flushed, and this method will block
      * until all pending ones are sent or it loses patience and times out.
      *
@@ -258,7 +266,7 @@ public class CloudWatchRecorder extends MetricRecorder {
         // either execute immediately or queue up behind an in-flight flush
         // (and be cancelled). Worst case it gets executed immediately after
         // a previous one completes, which is fine.
-        publishExecutor.execute(this::sendAggregatedData);
+        publishExecutor.execute(sendAggregatedDataRunnable);
 
         // And shut down the publish thread, waiting to make sure our last
         // flush executes.
