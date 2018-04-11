@@ -14,6 +14,7 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
+import com.amazonaws.services.cloudwatch.model.AmazonCloudWatchException;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
@@ -99,14 +100,6 @@ public class CloudWatchRecorder extends MetricRecorder {
                 .build();
     }
 
-    private final Runnable sendAggregatedDataRunnable = () -> {
-        try {
-            this.sendAggregatedData();
-        } catch (Throwable t) {
-            log.error("CloudWatch recorder encountered an unrecoverable error and will stop", t);
-            throw t;
-        }
-    };
 
     private final AmazonCloudWatch metricsClient;
     private final String namespace;
@@ -239,7 +232,7 @@ public class CloudWatchRecorder extends MetricRecorder {
 
         int initialDelay = (jitter * 1000) + (publishFrequencySeconds * 1000);
 
-        publishExecutor.scheduleAtFixedRate(sendAggregatedDataRunnable,
+        publishExecutor.scheduleAtFixedRate(this::sendAggregatedData,
                                             initialDelay,
                                             publishFrequencySeconds * 1000,
                                             TimeUnit.MILLISECONDS);
@@ -266,7 +259,7 @@ public class CloudWatchRecorder extends MetricRecorder {
         // either execute immediately or queue up behind an in-flight flush
         // (and be cancelled). Worst case it gets executed immediately after
         // a previous one completes, which is fine.
-        publishExecutor.execute(sendAggregatedDataRunnable);
+        publishExecutor.execute(this::sendAggregatedData);
 
         // And shut down the publish thread, waiting to make sure our last
         // flush executes.
@@ -379,7 +372,13 @@ public class CloudWatchRecorder extends MetricRecorder {
         PutMetricDataRequest request = new PutMetricDataRequest();
         request.setNamespace( namespace );
         request.setMetricData( metricData );
-        metricsClient.putMetricData( request );
+
+        try {
+            metricsClient.putMetricData( request );
+        } catch (AmazonCloudWatchException e) {
+            // log and do nothing
+            log.error("Unable to publish metrics. CloudWatch recorder encountered an error", e);
+        }
     }
 
 }
