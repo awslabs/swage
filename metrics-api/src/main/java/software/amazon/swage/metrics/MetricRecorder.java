@@ -17,6 +17,7 @@ package software.amazon.swage.metrics;
 import java.io.Closeable;
 import java.time.Instant;
 
+import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 
 /**
@@ -97,13 +98,28 @@ public abstract class MetricRecorder {
      * Convenience functions are provided to call methods on the recorder with
      * this context.
      *
-     * TODO: provide a childContext() mechanism?
      */
     public final class Context implements Closeable {
         private final TypedMap data;
 
         private Context(final TypedMap data) {
             this.data = data;
+        }
+
+        /**
+         * Create a childContext from another context by favoring its keys over what's currently stored.
+         * For instance, if my TypedMap data has a key "Service" with a value "MyService"
+         * and a key "Operation" with a value "MyOperation"
+         * and another has a key "Operation" with a value "CoolOperation", the result of this methd
+         * will return a Context with keys "Service" -> "MyService" and "Operation" -> "CoolOperation"
+         * @param another the map to merge with. Should not be null.
+         * @return the merged context
+         */
+        public Context childContext(final TypedMap another) {
+            final DynamicContextData merged = new DynamicContextData();
+            data.stream().forEach(e -> merged.add(e.getKey(), e.getValue()));
+            another.stream().forEach(e -> merged.add(e.getKey(), e.getValue()));
+            return new Context(merged.build());
         }
 
         /**
