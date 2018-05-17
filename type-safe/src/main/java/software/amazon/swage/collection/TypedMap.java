@@ -17,6 +17,7 @@ package software.amazon.swage.collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
@@ -108,6 +109,20 @@ public interface TypedMap extends Iterable<TypedMap.Entry> {
          */
         public String toString() {
             return name;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            final Key<?> key = (Key<?>) o;
+            return Objects.equals(name, key.name) &&
+                    Objects.equals(valueType, key.valueType);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, valueType);
         }
     }
 
