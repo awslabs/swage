@@ -23,7 +23,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -200,6 +202,43 @@ public class MetricRecorderTest {
 
         assertTrue("Context not closed", closed.get(ctxt_1));
         assertFalse("Unassociated benchmark unexpectedly closed", closed.get(ctxt_2));
+    }
+
+    @Test
+    public void childContext() {
+        final String preservedKeyName = UUID.randomUUID().toString();
+        final Object preservedValue = new Object();
+        final TypedMap.Key<Object> preservedKey = TypedMap.key(preservedKeyName, Object.class);
+
+        final String replacedKeyName = UUID.randomUUID().toString();
+        final Object replacedValue = new Object();
+
+        final TypedMap.Key<Object> replacedKey = TypedMap.key(replacedKeyName, Object.class);
+        final TypedMap ctxt_1 = new ContextData().add(preservedKey, preservedValue)
+                .add(replacedKey, replacedValue)
+                .build();
+
+        final List<Event> output = new ArrayList<>(1);
+        final MetricRecorder mr = testRecorder(output);
+        final MetricRecorder.Context base = mr.context(ctxt_1);
+
+        final Object newValue = new Object();
+
+        final TypedMap.Key<Object> replacementKey = TypedMap.key(replacedKeyName, Object.class);
+        final TypedMap ctxt_2 = new ContextData().add(replacementKey, newValue).build();
+
+        final MetricRecorder.Context child = base.childContext(ctxt_2);
+
+        child.record(M_TIME, ThreadLocalRandom.current().nextInt(), Unit.MILLISECOND);
+        assertEquals("Unexpected number of metrics output", 1, output.size());
+        final Event e1 = output.get(0);
+        assertTrue(e1.metadata.containsKey(preservedKey));
+        assertTrue(e1.metadata.containsValue(preservedValue));
+        // true by state-based equality
+        assertTrue(e1.metadata.containsKey(replacedKey));
+        assertFalse(e1.metadata.containsValue(replacedValue));
+        assertTrue(e1.metadata.containsKey(replacementKey));
+        assertTrue(e1.metadata.containsValue(newValue));
     }
 
     private TypedMap makeContext(final String id) {

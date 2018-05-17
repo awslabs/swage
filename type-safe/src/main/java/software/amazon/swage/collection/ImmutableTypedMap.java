@@ -21,6 +21,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -129,7 +130,11 @@ public final class ImmutableTypedMap implements TypedMap {
         private final Map<Key<?>, Entry<?>> dataMap;
 
         protected Builder() {
-            this.dataMap = new IdentityHashMap<>();
+            this(new IdentityHashMap<>());
+        }
+
+        protected Builder(final Map<Key<?>, Entry<?>> map) {
+            this.dataMap = Objects.requireNonNull(map);
         }
 
         public static Builder from(TypedMap data) {
