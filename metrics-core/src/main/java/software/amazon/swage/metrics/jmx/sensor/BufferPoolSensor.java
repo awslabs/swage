@@ -16,7 +16,7 @@ package software.amazon.swage.metrics.jmx.sensor;
 
 
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.lang.management.BufferPoolMXBean;
@@ -32,7 +32,7 @@ public class BufferPoolSensor implements Sensor {
     private static final long M = 1024*1024;
 
     @Override
-    public void sense(final MetricRecorder.Context metricContext)
+    public void sense(final MetricContext metricContext)
     {
         List<BufferPoolMXBean> pools = ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class);
 

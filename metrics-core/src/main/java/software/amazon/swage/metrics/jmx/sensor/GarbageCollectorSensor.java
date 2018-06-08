@@ -15,7 +15,7 @@
 package software.amazon.swage.metrics.jmx.sensor;
 
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.lang.management.GarbageCollectorMXBean;
@@ -55,7 +55,7 @@ public class GarbageCollectorSensor implements Sensor {
     private long prevTotalTime = 0L;
 
     @Override
-    public void sense(final MetricRecorder.Context metricContext)
+    public void sense(final MetricContext metricContext)
     {
         List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
 

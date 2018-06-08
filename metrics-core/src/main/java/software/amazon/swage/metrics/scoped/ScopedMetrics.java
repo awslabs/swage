@@ -16,6 +16,7 @@ package software.amazon.swage.metrics.scoped;
 
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 import software.amazon.swage.threadcontext.ThreadContext;
@@ -63,8 +64,8 @@ public class ScopedMetrics {
     private static final Object lock = new Object();
     private static MetricRecorder recorder;
 
-    private static final ThreadContext.Key<MetricRecorder.Context> CTX_KEY =
-            ThreadContext.key(MetricRecorder.Context.class);
+    private static final ThreadContext.Key<MetricContext> CTX_KEY =
+            ThreadContext.key(MetricContext.class);
 
 
     /**

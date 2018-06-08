@@ -16,7 +16,7 @@ package software.amazon.swage.metrics.jmx.sensor;
 
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.lang.management.ManagementFactory;
@@ -38,7 +38,7 @@ public class RuntimeSensor implements Sensor {
     }
 
     @Override
-    public void sense(final MetricRecorder.Context metricContext)
+    public void sense(final MetricContext metricContext)
     {
         RuntimeMXBean mxBean = ManagementFactory.getRuntimeMXBean();
 

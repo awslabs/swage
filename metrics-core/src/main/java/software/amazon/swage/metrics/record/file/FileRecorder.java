@@ -27,13 +27,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 
 /**
  * Simple MetricRecorder that sends metrics events to a file.
  *
- * The metadata will be written to a file with the current time slice appended to
+ * The dimensions will be written to a file with the current time slice appended to
  * the end of the name, and periodically rolled over to a new file.
  *
  * This implementation is bare-bones, and does not serialize to any
@@ -128,7 +129,7 @@ public class FileRecorder extends MetricRecorder {
             final Number value,
             final Unit unit,
             final Instant timestamp,
-            final Context context)
+            final MetricContext context)
     {
         if (!running.get()) {
             log.debug("record called on shutdown recorder");
@@ -139,7 +140,7 @@ public class FileRecorder extends MetricRecorder {
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
-        serializeContext(sb, context.metadata());
+        serializeContext(sb, context.dimensions());
         sb.append(":")
           .append(String.valueOf(value))
           .append(unit.toString())
@@ -153,7 +154,7 @@ public class FileRecorder extends MetricRecorder {
     protected void count(
             final Metric label,
             final long delta,
-            final Context context)
+            final MetricContext context)
     {
         if (!running.get()) {
             log.debug("count called on shutdown recorder");
@@ -164,7 +165,7 @@ public class FileRecorder extends MetricRecorder {
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
-        serializeContext(sb, context.metadata());
+        serializeContext(sb, context.dimensions());
         sb.append(":count:")
           .append(delta)
           .append('\n');

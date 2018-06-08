@@ -15,10 +15,10 @@
 package software.amazon.swage.metrics.jmx.sensor;
 
 import software.amazon.swage.collection.TypedMap;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 
 /**
- * Pull metadata of one particular type from one particular M(X)Bean and send to a
+ * Pull dimensions of one particular type from one particular M(X)Bean and send to a
  * MetricRecorder.
  *
  * Sensors are not required to be thread safe.
@@ -26,13 +26,13 @@ import software.amazon.swage.metrics.MetricRecorder;
 public interface Sensor {
 
     /**
-     * Add any additional context metadata to the existing context, return a new
-     * instance of context metadata.  Implementations that have no metadata to add
+     * Add any additional context dimensions to the existing context, return a new
+     * instance of context dimensions.  Implementations that have no dimensions to add
      * return the existing context unchanged.
      *
-     * @param existing Context metadata already known
+     * @param existing Context dimensions already known
      * @return A TypedMap containing all entries of the existing context with
-     *         sensor-specific metadata added
+     *         sensor-specific dimensions added
      */
     default public TypedMap addContext(final TypedMap existing)
     {
@@ -44,9 +44,9 @@ public interface Sensor {
      * results to {@code metrics}.  Must NOT close the {@code Context} object as other
      * {@code Sensor} may also contribute to it.
      *
-     * @param metricContext Metrics context which will be used to record metadata
+     * @param metricContext Metrics context which will be used to record dimensions
      * @throws SenseException When a problem occurred collecting measurements
      */
-    public void sense(final MetricRecorder.Context metricContext) throws SenseException;
+    public void sense(final MetricContext metricContext) throws SenseException;
 
 }

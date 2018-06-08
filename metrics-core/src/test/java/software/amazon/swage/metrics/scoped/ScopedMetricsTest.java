@@ -27,6 +27,7 @@ import static org.mockito.Mockito.spy;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 
@@ -40,9 +41,9 @@ public class ScopedMetricsTest {
     // Using this with spy to avoid complex mocking required for Context behavior.
     private static class TestRecorder extends MetricRecorder {
         @Override
-        protected void record(Metric m, Number v, Unit u, Instant t, Context c) {}
+        protected void record(Metric m, Number v, Unit u, Instant t, MetricContext c) {}
         @Override
-        protected void count(Metric m, long d, Context c) {}
+        protected void count(Metric m, long d, MetricContext c) {}
     }
 
     @Test
@@ -68,8 +69,8 @@ public class ScopedMetricsTest {
                               eq(time),
                               eq(Unit.MILLISECOND),
                               argThat(t -> Instant.now().plusNanos(1).isAfter(t)),
-                              argThat(t -> metadata.equals(t.metadata())));
-            inOrder.verify(mr).record(eq(M_PERC), eq(load), eq(Unit.PERCENT), eq(timestamp), argThat(t -> metadata.equals(t.metadata())));
+                              argThat(t -> metadata.equals(t.dimensions())));
+            inOrder.verify(mr).record(eq(M_PERC), eq(load), eq(Unit.PERCENT), eq(timestamp), argThat(t -> metadata.equals(t.dimensions())));
 
             final TypedMap subctx = ContextData.withId("deadbeef").build();
             try (AutoCloseable sub = ScopedMetrics.open(subctx)) {
@@ -80,7 +81,7 @@ public class ScopedMetricsTest {
                                  eq(emit),
                                  eq(Unit.SECOND),
                                  argThat(t -> Instant.now().plusNanos(1).isAfter(t)),
-                                 argThat(t -> subctx.equals(t.metadata())));
+                                 argThat(t -> subctx.equals(t.dimensions())));
             }
         }
 
@@ -99,17 +100,17 @@ public class ScopedMetricsTest {
         try (AutoCloseable ig = ScopedMetrics.open(metadata)) {
             ScopedMetrics.count(M_FAIL);
         }
-        inOrder.verify(mr).count(eq(M_FAIL), eq(1L), argThat(t -> t.metadata().equals(metadata)));
+        inOrder.verify(mr).count(eq(M_FAIL), eq(1L), argThat(t -> t.dimensions().equals(metadata)));
 
         final TypedMap diffdata = ContextData.withId(UUID.randomUUID().toString()).build();
         try (AutoCloseable ig = ScopedMetrics.open(diffdata)) {
             ScopedMetrics.count(M_FAIL, 3);
-            inOrder.verify(mr).count(eq(M_FAIL), eq(3L), argThat(t -> t.metadata().equals(diffdata)));
+            inOrder.verify(mr).count(eq(M_FAIL), eq(3L), argThat(t -> t.dimensions().equals(diffdata)));
 
             final TypedMap subctx = ContextData.withId("deadbeef").build();
             try (AutoCloseable sub = ScopedMetrics.open(subctx)) {
                 ScopedMetrics.count(M_TIME);
-                inOrder.verify(mr).count(eq(M_TIME), eq(1L), argThat(t -> t.metadata().equals(subctx)));
+                inOrder.verify(mr).count(eq(M_TIME), eq(1L), argThat(t -> t.dimensions().equals(subctx)));
             }
         }
     }
@@ -131,8 +132,8 @@ public class ScopedMetricsTest {
             ScopedMetrics.record(M_TIME, amount, Unit.MILLISECOND, timestamp);
             ScopedMetrics.count(M_FAIL, 11);
         }
-        inOrder.verify(mr).record(eq(M_TIME), eq(amount), eq(Unit.MILLISECOND), eq(timestamp), argThat(t -> metadata.equals(t.metadata())));
-        inOrder.verify(mr).count(eq(M_FAIL), eq(11L), argThat(t -> metadata.equals(t.metadata())));
+        inOrder.verify(mr).record(eq(M_TIME), eq(amount), eq(Unit.MILLISECOND), eq(timestamp), argThat(t -> metadata.equals(t.dimensions())));
+        inOrder.verify(mr).count(eq(M_FAIL), eq(11L), argThat(t -> metadata.equals(t.dimensions())));
     }
 
 }

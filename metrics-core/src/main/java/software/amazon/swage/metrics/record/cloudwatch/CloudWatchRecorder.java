@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 
@@ -278,7 +279,7 @@ public class CloudWatchRecorder extends MetricRecorder {
             final Number value,
             final Unit unit,
             final Instant time,
-            final Context context)
+            final MetricContext context)
     {
         if (!running.get()) {
             log.debug("record called on shutdown recorder");
@@ -290,14 +291,14 @@ public class CloudWatchRecorder extends MetricRecorder {
         // event lost. Rather than having one timestamp apply to all, we just
         // drop the time information and use the timestamp of aggregation.
 
-        aggregator.add(context.metadata(),
+        aggregator.add(context.dimensions(),
                        label,
                        value.doubleValue(),
                        unitMapping.get(unit));
     }
 
     @Override
-    public void count(final Metric label, final long delta, final Context context)
+    public void count(final Metric label, final long delta, final MetricContext context)
     {
         if (!running.get()) {
             log.debug("count called on shutdown recorder");
@@ -305,7 +306,7 @@ public class CloudWatchRecorder extends MetricRecorder {
             return;
         }
 
-        aggregator.add(context.metadata(),
+        aggregator.add(context.dimensions(),
                        label,
                        Long.valueOf(delta).doubleValue(),
                        StandardUnit.Count);
@@ -344,14 +345,14 @@ public class CloudWatchRecorder extends MetricRecorder {
 
     private void sendAggregatedData() {
 
-        // Grab all the current aggregated metadata, resetting
+        // Grab all the current aggregated dimensions, resetting
         // the aggregator to empty in the process
         List<MetricDatum> metricData = aggregator.flush();
         if(metricData.isEmpty()) {
             return;
         }
 
-        // Send the metadata in batches to adhere to CloudWatch limitation on the
+        // Send the dimensions in batches to adhere to CloudWatch limitation on the
         // number of MetricDatum objects per request, see:
         // http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
         int begin = 0;

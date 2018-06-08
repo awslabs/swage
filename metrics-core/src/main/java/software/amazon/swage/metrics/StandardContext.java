@@ -17,7 +17,7 @@ package software.amazon.swage.metrics;
 import software.amazon.swage.collection.TypedMap;
 
 /**
- * Metric context builder with keys for metadata that is common across many
+ * Metric context builder with keys for dimensions that is common across many
  * different applications.
  *
  */

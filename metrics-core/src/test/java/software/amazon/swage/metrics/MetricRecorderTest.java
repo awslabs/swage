@@ -43,7 +43,7 @@ public class MetricRecorderTest {
 
         final UUID id = UUID.randomUUID();
         final TypedMap metadata = makeContext(id.toString());
-        final MetricRecorder.Context context = mr.context(metadata);
+        final MetricContext context = mr.context(metadata);
 
         final Number time = Integer.valueOf(23);
         final Instant timestamp = Instant.now();
@@ -57,8 +57,8 @@ public class MetricRecorderTest {
         assertEquals("Wrong value", time, e1.value);
         assertEquals("Wrong unit", Unit.MILLISECOND, e1.unit);
         assertTrue("Wrong timestamp", e1.timestamp.equals(timestamp));
-        assertEquals("Wrong benchmark", metadata, e1.context.metadata());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.metadata().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.dimensions());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.dimensions().get(ContextData.ID));
 
         final Number load = Integer.valueOf(87);
         context.record(M_PERC, load, Unit.PERCENT, timestamp);
@@ -69,8 +69,8 @@ public class MetricRecorderTest {
         assertEquals("Wrong value", load, e2.value);
         assertEquals("Wrong unit", Unit.PERCENT, e2.unit);
         assertTrue("Wrong timestamp", e2.timestamp.equals(timestamp));
-        assertEquals("Wrong benchmark", metadata, e2.context.metadata());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.metadata().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.dimensions());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.dimensions().get(ContextData.ID));
     }
 
     @Test
@@ -79,7 +79,7 @@ public class MetricRecorderTest {
 
         final UUID id = UUID.randomUUID();
         final TypedMap metadata = makeContext(id.toString());
-        final MetricRecorder.Context context = mr.context(metadata);
+        final MetricContext context = mr.context(metadata);
 
         context.count(M_FAIL, 1);
         List<MemoryRecorder.Event> output = mr.output();
@@ -88,8 +88,8 @@ public class MetricRecorderTest {
         final MemoryRecorder.Event e1 = output.get(0);
         assertEquals("Wrong metric", M_FAIL, e1.metric);
         assertEquals("Wrong value", 1L, e1.value);
-        assertEquals("Wrong benchmark", metadata, e1.context.metadata());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.metadata().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.dimensions());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.dimensions().get(ContextData.ID));
 
         context.count(M_FAIL, 3);
 
@@ -97,8 +97,8 @@ public class MetricRecorderTest {
         final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_FAIL, e2.metric);
         assertEquals("Wrong value", 3L, e2.value);
-        assertEquals("Wrong benchmark", metadata, e2.context.metadata());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.metadata().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.dimensions());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.dimensions().get(ContextData.ID));
     }
 
     @Test
@@ -107,7 +107,7 @@ public class MetricRecorderTest {
 
         final UUID id = UUID.randomUUID();
         final TypedMap metadata = makeContext(id.toString());
-        final MetricRecorder.Context context = mr.context(metadata);
+        final MetricContext context = mr.context(metadata);
 
         final Number amount = Integer.valueOf(37);
 
@@ -119,16 +119,16 @@ public class MetricRecorderTest {
         assertEquals("Wrong metric", M_TIME, e1.metric);
         assertEquals("Wrong value", amount, e1.value);
         assertEquals("Wrong unit", Unit.MILLISECOND, e1.unit);
-        assertEquals("Wrong benchmark", metadata, e1.context.metadata());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.metadata().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.dimensions());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.dimensions().get(ContextData.ID));
 
         context.count(M_FAIL, 11);
         assertEquals("Unexpected number of metrics output", 2, output.size());
         final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_FAIL, e2.metric);
         assertEquals("Wrong value", 11L, e2.value);
-        assertEquals("Wrong benchmark", metadata, e2.context.metadata());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.metadata().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.dimensions());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.dimensions().get(ContextData.ID));
     }
 
     @Test
@@ -137,13 +137,13 @@ public class MetricRecorderTest {
 
         MetricRecorder mr = new MetricRecorder() {
             @Override
-            protected void record(Metric a, Number b, Unit c, Instant d, Context e) { }
+            protected void record(Metric a, Number b, Unit c, Instant d, MetricContext e) { }
             @Override
-            protected void count(Metric a, long b, Context c) { }
+            protected void count(Metric a, long b, MetricContext c) { }
 
             @Override
-            protected void close(Context metadata) {
-                closed.put(metadata.metadata(), true);
+            protected void close(MetricContext metadata) {
+                closed.put(metadata.dimensions(), true);
             }
         };
 
@@ -152,8 +152,8 @@ public class MetricRecorderTest {
         closed.put(ctxt_1, false);
         closed.put(ctxt_2, false);
 
-        final MetricRecorder.Context r_ctxt_1 = mr.context(ctxt_1);
-        final MetricRecorder.Context r_ctxt_2 = mr.context(ctxt_2);
+        final MetricContext r_ctxt_1 = mr.context(ctxt_1);
+        final MetricContext r_ctxt_2 = mr.context(ctxt_2);
         r_ctxt_1.record(M_TIME, 1, Unit.MILLISECOND);
         r_ctxt_2.record(M_TIME, 2, Unit.MILLISECOND);
 

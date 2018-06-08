@@ -35,7 +35,7 @@ public class MultiRecorder extends MetricRecorder {
             final Number value,
             final Unit unit,
             final Instant timestamp,
-            final Context context)
+            final MetricContext context)
     {
         //TODO: something smarter, or at least call out ordered iterated nature
         for (MetricRecorder r : recorders) {
@@ -44,7 +44,7 @@ public class MultiRecorder extends MetricRecorder {
     }
 
     @Override
-    protected void count(final Metric label, final long delta, final Context context) {
+    protected void count(final Metric label, final long delta, final MetricContext context) {
         for (MetricRecorder r : recorders) {
             r.count(label, delta, context);
         }

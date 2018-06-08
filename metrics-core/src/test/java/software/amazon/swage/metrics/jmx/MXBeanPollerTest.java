@@ -16,6 +16,7 @@ package software.amazon.swage.metrics.jmx;
 
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.StandardContext;
 import software.amazon.swage.metrics.Unit;
@@ -64,12 +65,12 @@ public class MXBeanPollerTest {
                 final Number value,
                 final Unit unit,
                 final Instant time,
-                final Context context)
+                final MetricContext context)
         {
         }
 
         @Override
-        protected void count(final Metric label, final long delta, final Context context) {
+        protected void count(final Metric label, final long delta, final MetricContext context) {
         }
     }
 
@@ -93,8 +94,8 @@ public class MXBeanPollerTest {
         final ArgumentMatcher<TypedMap> dataMatch = new DataMatcher();
         verify(sensor1).addContext(argThat(dataMatch));
         verify(sensor2).addContext(argThat(dataMatch));
-        verify(sensor1, atLeastOnce()).sense(any(MetricRecorder.Context.class));
-        verify(sensor2, atLeastOnce()).sense(any(MetricRecorder.Context.class));
+        verify(sensor1, atLeastOnce()).sense(any(MetricContext.class));
+        verify(sensor2, atLeastOnce()).sense(any(MetricContext.class));
     }
 
     @Test

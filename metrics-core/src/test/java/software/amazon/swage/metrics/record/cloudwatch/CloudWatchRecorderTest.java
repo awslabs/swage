@@ -17,7 +17,7 @@ package software.amazon.swage.metrics.record.cloudwatch;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.model.Dimension;
@@ -99,7 +99,7 @@ public class CloudWatchRecorderTest {
 
         final CloudWatchRecorder recorder = new CloudWatchRecorder(client, namespace, 60, 120, mapper);
 
-        final MetricRecorder.Context context = recorder.context(data);
+        final MetricContext context = recorder.context(data);
         context.record(M_TIME, time, Unit.MILLISECOND, Instant.now());
         context.close();
 
@@ -132,7 +132,7 @@ public class CloudWatchRecorderTest {
             recorder = new CloudWatchRecorder(client, namespace, 0, 1, mapper);
 
             final TypedMap data = ContextData.withId(id).build();
-            final MetricRecorder.Context context = recorder.context(data);
+            final MetricContext context = recorder.context(data);
 
             final Instant timestamp = Instant.now();
 
@@ -200,7 +200,7 @@ public class CloudWatchRecorderTest {
             recorder = new CloudWatchRecorder(client, namespace, 0, 1, mapper);
 
             final TypedMap data = ContextData.withId(id).build();
-            final MetricRecorder.Context context = recorder.context(data);
+            final MetricContext context = recorder.context(data);
 
             context.count(M_FAIL, failCnts[0]);
             context.record(M_PERC, percVals[0], Unit.PERCENT, Instant.now());

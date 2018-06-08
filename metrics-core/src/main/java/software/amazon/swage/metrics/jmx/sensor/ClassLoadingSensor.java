@@ -15,7 +15,7 @@
 package software.amazon.swage.metrics.jmx.sensor;
 
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.lang.management.ClassLoadingMXBean;
@@ -43,7 +43,7 @@ public class ClassLoadingSensor implements Sensor {
     public static final Metric UNLOADED_COUNT = Metric.define("UnLoadedClassCountTotal");
 
     @Override
-    public void sense(final MetricRecorder.Context metricContext)
+    public void sense(final MetricContext metricContext)
     {
         ClassLoadingMXBean mxBean = ManagementFactory.getClassLoadingMXBean();
 

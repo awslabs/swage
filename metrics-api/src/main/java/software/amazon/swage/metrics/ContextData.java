@@ -18,23 +18,23 @@ import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 
 /**
- * Builder for metadata carried with the context under which a metric is reported.
+ * Builder for dimensions carried with the context under which a metric is reported.
  *
  * <p>
- * Roughly equivalent to a request context, this is the metadata associated with
+ * Roughly equivalent to a request context, this is the dimensions associated with
  * a metric context that allows relations and aggregations between events.
  * Things like request id, tracing id, etc. will be carried here.
  *
  * <p>
  * Built instances are immutable.  Metric recording will use
- * the metadata across threads as needed, and relies on the metadata being
+ * the dimensions across threads as needed, and relies on the dimensions being
  * unchanged for a particular Context.
  *
  * <p>
  * Different application domains may extend the builder to facilitate adding
- * the appropriate metadata.
+ * the appropriate dimensions.
  *
- * A domain-specific metadata builder might look like:
+ * A domain-specific dimensions builder might look like:
  * <pre>{@code
 public class DomainSpecificData extends ContextData {
     public static final TypedMap.Key<String> MARKETPLACE = TypedMap.key("marketplace", String.class);
@@ -42,9 +42,9 @@ public class DomainSpecificData extends ContextData {
     public static final TypedMap.Key<String> OPERATION   = TypedMap.key("operation", String.class);
     public static final TypedMap.Key<String> PROGRAM     = TypedMap.key("programName", String.class);
 
-    public static DomainSpecificData from(TypedMap metadata) {
+    public static DomainSpecificData from(TypedMap dimensions) {
         DomainSpecificData b = new DomainSpecificData();
-        metadata.iterator().forEachRemaining((e) -> b.add(e.getKey(), e));
+        dimensions.iterator().forEachRemaining((e) -> b.add(e.getKey(), e));
         return b;
     }
 

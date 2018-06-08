@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 
@@ -18,9 +19,9 @@ public class MemoryRecorder extends MetricRecorder {
         public final Number value;
         public final Unit unit;
         public final Instant timestamp;
-        public final Context context;
+        public final MetricContext context;
 
-        private Event(Metric metric, Number value, Unit unit, Instant timestamp, Context context) {
+        private Event(Metric metric, Number value, Unit unit, Instant timestamp, MetricContext context) {
             this.metric = metric;
             this.value = value;
             this.unit = unit;
@@ -28,7 +29,7 @@ public class MemoryRecorder extends MetricRecorder {
             this.context = context;
         }
 
-        private Event(Metric name, long delta, Context context) {
+        private Event(Metric name, long delta, MetricContext context) {
             this.metric = name;
             this.value = Long.valueOf(delta);
             this.unit = Unit.NONE;
@@ -40,12 +41,12 @@ public class MemoryRecorder extends MetricRecorder {
     private final List<Event> output = new ArrayList<>();
 
     @Override
-    protected void record(Metric label, Number value, Unit unit, Instant time, Context context) {
+    protected void record(Metric label, Number value, Unit unit, Instant time, MetricContext context) {
         output.add(new Event(label, value, unit, time, context));
     }
 
     @Override
-    protected void count(Metric metric, long delta, Context context) {
+    protected void count(Metric metric, long delta, MetricContext context) {
         output.add(new Event(metric, delta, context));
     }
 
