@@ -14,8 +14,6 @@
  */
 package software.amazon.swage.metrics;
 
-import software.amazon.swage.collection.TypedMap;
-
 import java.time.Instant;
 import java.util.List;
 
@@ -37,7 +35,7 @@ public class MultiRecorder extends MetricRecorder {
             final Number value,
             final Unit unit,
             final Instant timestamp,
-            final TypedMap context)
+            final Context context)
     {
         //TODO: something smarter, or at least call out ordered iterated nature
         for (MetricRecorder r : recorders) {
@@ -46,7 +44,7 @@ public class MultiRecorder extends MetricRecorder {
     }
 
     @Override
-    protected void count(final Metric label, final long delta, final TypedMap context) {
+    protected void count(final Metric label, final long delta, final Context context) {
         for (MetricRecorder r : recorders) {
             r.count(label, delta, context);
         }

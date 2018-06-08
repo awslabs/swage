@@ -65,7 +65,7 @@ public class MetricDataAggregatorTest {
         assertEquals("Metric datum has wrong stats value", Double.valueOf(value), stats.getMaximum());
         assertEquals("Metric datum has wrong stats count", Double.valueOf(1), stats.getSampleCount());
 
-        assertTrue("Flush with no data was non-empty", aggregator.flush().isEmpty());
+        assertTrue("Flush with no metadata was non-empty", aggregator.flush().isEmpty());
     }
 
 
@@ -88,7 +88,7 @@ public class MetricDataAggregatorTest {
 
         List<MetricDatum> ags = aggregator.flush();
 
-        assertEquals("Metric data hs wrong size", names.length, ags.size());
+        assertEquals("Metric metadata hs wrong size", names.length, ags.size());
         for (MetricDatum d : ags) {
             int i = 0;
             while (i < names.length && !names[i].toString().equals(d.getMetricName())) {
@@ -106,7 +106,7 @@ public class MetricDataAggregatorTest {
             assertEquals("Metric datum has wrong stats count", Double.valueOf(1), stats.getSampleCount());
         }
 
-        assertTrue("Flush with no data was non-empty", aggregator.flush().isEmpty());
+        assertTrue("Flush with no metadata was non-empty", aggregator.flush().isEmpty());
     }
 
     @Test
@@ -135,7 +135,7 @@ public class MetricDataAggregatorTest {
 
         List<MetricDatum> ags = aggregator.flush();
 
-        assertEquals("Metric data hs wrong size", 4, ags.size());
+        assertEquals("Metric metadata hs wrong size", 4, ags.size());
         boolean[] seen = {false, false, false, false};
         for (MetricDatum d : ags) {
             if (d.getMetricName().equals(A.toString()) && d.getUnit().equals(StandardUnit.Seconds.toString())) {
@@ -178,9 +178,9 @@ public class MetricDataAggregatorTest {
             assertTrue("Expected aggregated metric not seen", seen[i]);
         }
 
-        assertTrue("Flush with no data was non-empty", aggregator.flush().isEmpty());
+        assertTrue("Flush with no metadata was non-empty", aggregator.flush().isEmpty());
 
-        // Now add more data, but let's just do two this time
+        // Now add more metadata, but let's just do two this time
         for (int i=0; i<5; i++) {
             aggregator.add(context, A, i, StandardUnit.Count);
         }
@@ -193,7 +193,7 @@ public class MetricDataAggregatorTest {
 
         ags = aggregator.flush();
 
-        assertEquals("Metric data hs wrong size", 2, ags.size());
+        assertEquals("Metric metadata hs wrong size", 2, ags.size());
         boolean seenA = false;
         boolean seenO = false;
         for (MetricDatum d : ags) {
@@ -220,7 +220,7 @@ public class MetricDataAggregatorTest {
         assertTrue("Expected aggregated metric not seen", seenA);
         assertTrue("Expected aggregated metric not seen", seenO);
 
-        assertTrue("Flush with no data was non-empty", aggregator.flush().isEmpty());
+        assertTrue("Flush with no metadata was non-empty", aggregator.flush().isEmpty());
     }
 
 }

@@ -14,13 +14,6 @@
  */
 package software.amazon.swage.metrics.record.file;
 
-import software.amazon.swage.collection.TypedMap;
-import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
-import software.amazon.swage.metrics.Unit;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Path;
@@ -30,10 +23,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.swage.collection.TypedMap;
+import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.Unit;
+
 /**
  * Simple MetricRecorder that sends metrics events to a file.
  *
- * The data will be written to a file with the current time slice appended to
+ * The metadata will be written to a file with the current time slice appended to
  * the end of the name, and periodically rolled over to a new file.
  *
  * This implementation is bare-bones, and does not serialize to any
@@ -128,7 +128,7 @@ public class FileRecorder extends MetricRecorder {
             final Number value,
             final Unit unit,
             final Instant timestamp,
-            final TypedMap context)
+            final Context context)
     {
         if (!running.get()) {
             log.debug("record called on shutdown recorder");
@@ -139,7 +139,7 @@ public class FileRecorder extends MetricRecorder {
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
-        serializeContext(sb, context);
+        serializeContext(sb, context.metadata());
         sb.append(":")
           .append(String.valueOf(value))
           .append(unit.toString())
@@ -153,7 +153,7 @@ public class FileRecorder extends MetricRecorder {
     protected void count(
             final Metric label,
             final long delta,
-            final TypedMap context)
+            final Context context)
     {
         if (!running.get()) {
             log.debug("count called on shutdown recorder");
@@ -164,7 +164,7 @@ public class FileRecorder extends MetricRecorder {
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
-        serializeContext(sb, context);
+        serializeContext(sb, context.metadata());
         sb.append(":count:")
           .append(delta)
           .append('\n');

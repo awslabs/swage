@@ -47,7 +47,7 @@ public class MXBeanPollerTest {
     private static final class DataMatcher implements ArgumentMatcher<TypedMap> {
         @Override
         public boolean matches(final TypedMap data) {
-            if (data.get(StandardContext.OPERATION) != "JMX") {
+            if (!"JMX".equals(data.get(StandardContext.OPERATION))) {
                 return false;
             }
             String id = data.get(StandardContext.ID);
@@ -64,12 +64,12 @@ public class MXBeanPollerTest {
                 final Number value,
                 final Unit unit,
                 final Instant time,
-                final TypedMap context)
+                final Context context)
         {
         }
 
         @Override
-        protected void count(final Metric label, final long delta, final TypedMap context) {
+        protected void count(final Metric label, final long delta, final Context context) {
         }
     }
 

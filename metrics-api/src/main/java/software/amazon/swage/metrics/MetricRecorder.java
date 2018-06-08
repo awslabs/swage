@@ -30,13 +30,13 @@ import software.amazon.swage.collection.TypedMap;
  * </ul>
  *
  * <p>The metrics captured are associated with the currently executing unit of
- * work (aka task) such as a service request, as captured by a context data object.
+ * work (aka task) such as a service request, as captured by a context metadata object.
  * Recording a metric is done by sending a MetricRecorder instance the current
- * context data and the specific event to record.
+ * context metadata and the specific event to record.
  *
- * <p>The MetricRecorder provides a Context abstraction wrapping the context data
+ * <p>The MetricRecorder provides a Context abstraction wrapping the context metadata
  * and a reference to the MetricRecorder for convenient usage - metric-recording
- * tasks need only reference a Context object, with the context data and
+ * tasks need only reference a Context object, with the context metadata and
  * MetricRecorder being handled by the task defining layer.
 
  * <p>A recorder instance may also have 'global' context associated with it, such
@@ -85,25 +85,35 @@ public abstract class MetricRecorder {
     /**
      * Context under which a metric is reported.
      *
-     * A Context is a convenience wrapper around the context data object, where
-     * the data object represents the actual unique identifier for a given task.
+     * A Context is a convenience wrapper around the context metadata object, where
+     * the metadata object represents the actual unique identifier for a given task.
      * In general, applications recording metrics will be interacting with an
      * instance of this Context (or some functionality on top of this).
      *
      * Each context carries a reference to the recorder appropriate for recording
      * metrics.  This removes the need for users to carry around both a recorder
-     * and the current context data, as well as giving a strong link between what
+     * and the current context metadata, as well as giving a strong link between what
      * a recorder requires in a context and the context that provides it.
      * Convenience functions are provided to call methods on the recorder with
      * this context.
      *
      * TODO: provide a childContext() mechanism?
      */
-    public final class Context implements Closeable {
+    public static final class Context implements Closeable {
+        private final MetricRecorder recorder;
         private final TypedMap data;
 
-        private Context(final TypedMap data) {
+        private Context(MetricRecorder recorder, TypedMap data) {
+            this.recorder = recorder;
             this.data = data;
+        }
+
+        /**
+         * Returns the Context metadata.
+         * @return the Context metadata
+         */
+        public TypedMap metadata() {
+            return data;
         }
 
         /**
@@ -123,19 +133,19 @@ public abstract class MetricRecorder {
          * @param unit  Type of the value, e.g. seconds, percent, etc.
          * @param time  When the value was sampled.
          */
-        public final void record(Metric label, Number value, Unit unit, Instant time) {
-            MetricRecorder.this.record(label, value, unit, time, data);
+        public void record(Metric label, Number value, Unit unit, Instant time) {
+            recorder.record(label, value, unit, time, this);
         }
 
         /**
          * Convenience method to record a metric at the current time.
-         * Equivalent to calling record(metric, value, unit, Instant.now(), data)
+         * Equivalent to calling record(metric, value, unit, Instant.now(), metadata)
          * @param label The metric being recorded.
          * @param value Gauged value, with units.
          * @param unit  Type of the value, e.g. seconds, percent, etc.
          */
-        public final void record(Metric label, Number value, Unit unit) {
-            MetricRecorder.this.record(label, value, unit, Instant.now(), data);
+        public void record(Metric label, Number value, Unit unit) {
+            recorder.record(label, value, unit, Instant.now(), this);
         }
 
         /**
@@ -144,7 +154,7 @@ public abstract class MetricRecorder {
          * These are explicitly aggregated values, where only the total number of
          * occurrences in a context matter.
          * Examples include counting number of times a method is called, or keeping
-         * track of the number of errors encountered, or the amount of data sent
+         * track of the number of errors encountered, or the amount of metadata sent
          * while in the given context.
          *
          * If you need to distinguish between occurrences of an event, or care that
@@ -162,8 +172,8 @@ public abstract class MetricRecorder {
          * @param label The metric being recorded.
          * @param delta Change in the value to record.
          */
-        public final void count(Metric label, long delta) {
-            MetricRecorder.this.count(label, delta, data);
+        public void count(Metric label, long delta) {
+            recorder.count(label, delta, this);
         }
 
         /**
@@ -179,27 +189,27 @@ public abstract class MetricRecorder {
          * throw an IllegalStateException in such a case, but have no obligation
          * to do so.
          */
-        public final void close() {
-            MetricRecorder.this.close(data);
+        public void close() {
+            recorder.close(this);
         }
     }
 
     /**
-     * Construct a new Context object for the given data.
+     * Construct a new Context object for the given metadata.
      *
-     * The returned Context is a light wrapper around the provided data object.
-     * Context objects created with the same data object will be functionally
+     * The returned Context is a light wrapper around the provided metadata object.
+     * Context objects created with the same metadata object will be functionally
      * equivalent, and MetricRecorder implementations are free to return the
-     * same object if called multiple times with the same data object.
+     * same object if called multiple times with the same metadata object.
      * The logical context scope is defined by object identity on the context
-     * data object.  Two context data objects with the same values will be
+     * metadata object.  Two context metadata objects with the same values will be
      * treated as different contexts.
      *
-     * @param data An object to be used for identifying the Context.
-     * @return A new Context object wrapping the provided data object.
+     * @param metadata An object to be used for identifying the Context.
+     * @return A new Context object wrapping the provided metadata object.
      */
-    public Context context(TypedMap data) {
-        return new Context(data);
+    public Context context(TypedMap metadata) {
+        return new Context(this, metadata);
     }
 
 
@@ -214,14 +224,14 @@ public abstract class MetricRecorder {
      * @param value Gauged value, with units.
      * @param unit  Type of the value, e.g. seconds, percent, etc.
      * @param time  When the value was sampled.
-     * @param context Identifying data about context the value belongs in.
+     * @param context Identifying metadata about context the value belongs in.
      */
     protected abstract void record(
             Metric label,
             Number value,
             Unit unit,
             Instant time,
-            TypedMap context);
+            Context context);
 
     /**
      * Count the increase or decrease of a metric in the given context.
@@ -229,7 +239,7 @@ public abstract class MetricRecorder {
      * These are explicitly aggregated values, where only the total number of
      * occurrences in a context matter.
      * Examples include counting number of times a method is called, or keeping
-     * track of the number of errors encountered, or the amount of data sent
+     * track of the number of errors encountered, or the amount of metadata sent
      * while in the given context.
      *
      * If you need to distinguish between occurrences of an event, or care that
@@ -242,11 +252,11 @@ public abstract class MetricRecorder {
      * This method will fail silently, as application code is not expected
      * to depend on success or failure.
      *
-     * @param label The metric to capture
-     * @param delta The increase (or decrease) in the value
-     * @param context Identifying data about context the value belongs in.
+     * @param label the metric to capture
+     * @param delta the increase (or decrease) in the value
+     * @param context the context the value belongs in.
      */
-    protected abstract void count(Metric label, long delta, TypedMap context);
+    protected abstract void count(Metric label, long delta, Context context);
 
 
     /**
@@ -254,7 +264,7 @@ public abstract class MetricRecorder {
      * will emit no more metric events.
      *
      * Once close() is called for a given context, the MetricRecorder may clean
-     * up, aggregate, and/or flush any data associated with that context.
+     * up, aggregate, and/or flush any metadata associated with that context.
      *
      * After close() is called for a given context, any subsequent calls to this
      * recorder referencing that context will result in undefined behavior.
@@ -262,17 +272,16 @@ public abstract class MetricRecorder {
      * a case, but have no obligation to do so.
      *
      * The logical context scope is defined by object identity on the context
-     * data object.  Two context data objects with the same values will be
+     * metadata object.  Two context metadata objects with the same values will be
      * treated as different contexts.
      *
      * The default implementation of this method is a no-op.  MetricRecorder
      * implementations should implement this method as appropriate, but may
      * ignore if no buffering or aggregation is present.
      *
-     * @param context Identifying data for the context being closed.
+     * @param context The context being closed.
      */
-    protected void close(TypedMap context) {
-        return;
+    protected void close(Context context) {
     }
 
 }

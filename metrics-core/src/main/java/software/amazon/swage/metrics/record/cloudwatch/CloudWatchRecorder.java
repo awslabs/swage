@@ -14,20 +14,6 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import software.amazon.swage.collection.TypedMap;
-import software.amazon.swage.metrics.ContextData;
-import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
-import software.amazon.swage.metrics.Unit;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,6 +24,19 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
+import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
+import com.amazonaws.services.cloudwatch.model.StandardUnit;
+import com.amazonaws.services.cloudwatch.model.StatisticSet;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.swage.metrics.ContextData;
+import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.Unit;
 
 /**
  * MetricRecorder that sends all metric events to CloudWatch.
@@ -279,7 +278,7 @@ public class CloudWatchRecorder extends MetricRecorder {
             final Number value,
             final Unit unit,
             final Instant time,
-            final TypedMap context)
+            final Context context)
     {
         if (!running.get()) {
             log.debug("record called on shutdown recorder");
@@ -291,14 +290,14 @@ public class CloudWatchRecorder extends MetricRecorder {
         // event lost. Rather than having one timestamp apply to all, we just
         // drop the time information and use the timestamp of aggregation.
 
-        aggregator.add(context,
+        aggregator.add(context.metadata(),
                        label,
                        value.doubleValue(),
                        unitMapping.get(unit));
     }
 
     @Override
-    public void count(final Metric label, final long delta, final TypedMap context)
+    public void count(final Metric label, final long delta, final Context context)
     {
         if (!running.get()) {
             log.debug("count called on shutdown recorder");
@@ -306,7 +305,7 @@ public class CloudWatchRecorder extends MetricRecorder {
             return;
         }
 
-        aggregator.add(context,
+        aggregator.add(context.metadata(),
                        label,
                        Long.valueOf(delta).doubleValue(),
                        StandardUnit.Count);
@@ -345,14 +344,14 @@ public class CloudWatchRecorder extends MetricRecorder {
 
     private void sendAggregatedData() {
 
-        // Grab all the current aggregated data, resetting
+        // Grab all the current aggregated metadata, resetting
         // the aggregator to empty in the process
         List<MetricDatum> metricData = aggregator.flush();
         if(metricData.isEmpty()) {
             return;
         }
 
-        // Send the data in batches to adhere to CloudWatch limitation on the
+        // Send the metadata in batches to adhere to CloudWatch limitation on the
         // number of MetricDatum objects per request, see:
         // http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
         int begin = 0;

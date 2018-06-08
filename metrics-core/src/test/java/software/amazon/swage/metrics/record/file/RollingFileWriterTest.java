@@ -88,7 +88,7 @@ public class RollingFileWriterTest {
         assertEquals(null, w.getCurrentFile());
 
         // Force the writer to be created
-        w.write("some data here", 0, 0);
+        w.write("some metadata here", 0, 0);
 
         // Clean up
         w.close();
@@ -120,7 +120,7 @@ public class RollingFileWriterTest {
 
         // Set the RollingFileWriter to roll every minute
         final RollingFileWriter w = new RollingFileWriter(testDir, base, tz, true);
-        w.write("mo data mo problems", 0, 0);
+        w.write("mo metadata mo problems", 0, 0);
         w.close();
 
         // Just in case minute rolled during test, check before and after minutes

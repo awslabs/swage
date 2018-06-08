@@ -47,7 +47,7 @@ import java.util.Set;
  * does a lookup based on the stored information.  Ideally every event recorded
  * would send with it all available context information, and a separate system
  * (perhaps CloudWatch, perhaps something sitting in front) would allow those
- * consuming the data to filter as needed.
+ * consuming the metadata to filter as needed.
  *
  * A DimensionMapper should be configured at application startup/configuration,
  * like:
@@ -118,7 +118,7 @@ public class DimensionMapper {
     }
 
     /**
-     * Pull desired info out of the metric context data and convert to
+     * Pull desired info out of the metric context metadata and convert to
      * CloudWatch {@link Dimension} objects, according to the filter mapping
      * defined.
      *
@@ -126,7 +126,7 @@ public class DimensionMapper {
      * the dimension will be added with a value of "null".
      *
      * @param metric Metric being sent
-     * @param context TypedMap containing metric context data
+     * @param context TypedMap containing metric context metadata
      * @return A list of Dimensions appropriate to send to CloudWatch
      */
     public List<Dimension> getDimensions(final Metric metric, final TypedMap context)

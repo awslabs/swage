@@ -19,7 +19,6 @@ import software.amazon.swage.collection.TypedMap;
 import org.junit.Test;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +27,7 @@ import java.util.UUID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import software.amazon.swage.metrics.record.MemoryRecorder;
 
 /**
  * Test the MetricRecorder scaffolding and included Context object
@@ -37,49 +37,9 @@ public class MetricRecorderTest {
     private static final Metric M_PERC = Metric.define("PercentSomething");
     private static final Metric M_FAIL = Metric.define("Failure");
 
-    // Helper to represent a metric event, for ease comparing input and output
-    private static class Event {
-        public final Metric metric;
-        public final Number value;
-        public final Unit unit;
-        public final Instant timestamp;
-        public final TypedMap metadata;
-
-        private Event(Metric metric, Number value, Unit unit, Instant timestamp, TypedMap metadata) {
-            this.metric = metric;
-            this.value = value;
-            this.unit = unit;
-            this.timestamp = timestamp;
-            this.metadata = metadata;
-        }
-        private Event(Metric name, long delta, TypedMap metadata) {
-            this.metric = name;
-            this.value = Long.valueOf(delta);
-            this.unit = Unit.NONE;
-            this.timestamp = null;
-            this.metadata = metadata;
-        }
-    }
-
-    // Simple impl that echos things out to a list
-    private MetricRecorder testRecorder(List<Event> output) {
-        return new MetricRecorder() {
-            @Override
-            protected void record(Metric label, Number value, Unit unit, Instant time, TypedMap metadata) {
-                output.add(new Event(label, value, unit, time, metadata));
-            }
-
-            @Override
-            protected void count(Metric metric, long delta, TypedMap metadata) {
-                output.add(new Event(metric, delta, metadata));
-            }
-        };
-    }
-
     @Test
     public void sample() throws Exception {
-        final List<Event> output = new ArrayList<>(2);
-        final MetricRecorder mr = testRecorder(output);
+        final MemoryRecorder mr = new MemoryRecorder();
 
         final UUID id = UUID.randomUUID();
         final TypedMap metadata = makeContext(id.toString());
@@ -89,62 +49,61 @@ public class MetricRecorderTest {
         final Instant timestamp = Instant.now();
 
         context.record(M_TIME, time, Unit.MILLISECOND, timestamp);
+        List<MemoryRecorder.Event> output = mr.output();
 
         assertEquals("Unexpected number of metrics output", 1, output.size());
-        final Event e1 = output.get(0);
+        final MemoryRecorder.Event e1 = output.get(0);
         assertEquals("Wrong metric", M_TIME, e1.metric);
         assertEquals("Wrong value", time, e1.value);
         assertEquals("Wrong unit", Unit.MILLISECOND, e1.unit);
         assertTrue("Wrong timestamp", e1.timestamp.equals(timestamp));
-        assertEquals("Wrong benchmark", metadata, e1.metadata);
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.metadata.get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.metadata());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.metadata().get(ContextData.ID));
 
         final Number load = Integer.valueOf(87);
         context.record(M_PERC, load, Unit.PERCENT, timestamp);
 
         assertEquals("Unexpected number of metrics output", 2, output.size());
-        final Event e2 = output.get(1);
+        final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_PERC, e2.metric);
         assertEquals("Wrong value", load, e2.value);
         assertEquals("Wrong unit", Unit.PERCENT, e2.unit);
         assertTrue("Wrong timestamp", e2.timestamp.equals(timestamp));
-        assertEquals("Wrong benchmark", metadata, e2.metadata);
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.metadata.get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.metadata());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.metadata().get(ContextData.ID));
     }
 
     @Test
     public void count() throws Exception {
-        final List<Event> output = new ArrayList<>(2);
-        final MetricRecorder mr = testRecorder(output);
+        final MemoryRecorder mr = new MemoryRecorder();
 
         final UUID id = UUID.randomUUID();
         final TypedMap metadata = makeContext(id.toString());
         final MetricRecorder.Context context = mr.context(metadata);
 
-
         context.count(M_FAIL, 1);
+        List<MemoryRecorder.Event> output = mr.output();
 
         assertEquals("Unexpected number of metrics output", 1, output.size());
-        final Event e1 = output.get(0);
+        final MemoryRecorder.Event e1 = output.get(0);
         assertEquals("Wrong metric", M_FAIL, e1.metric);
         assertEquals("Wrong value", 1L, e1.value);
-        assertEquals("Wrong benchmark", metadata, e1.metadata);
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.metadata.get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.metadata());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.metadata().get(ContextData.ID));
 
         context.count(M_FAIL, 3);
 
         assertEquals("Unexpected number of metrics output", 2, output.size());
-        final Event e2 = output.get(1);
+        final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_FAIL, e2.metric);
         assertEquals("Wrong value", 3L, e2.value);
-        assertEquals("Wrong benchmark", metadata, e2.metadata);
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.metadata.get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.metadata());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.metadata().get(ContextData.ID));
     }
 
     @Test
     public void sample_and_count() throws Exception {
-        final List<Event> output = new ArrayList<>(2);
-        final MetricRecorder mr = testRecorder(output);
+        final MemoryRecorder mr = new MemoryRecorder();
 
         final UUID id = UUID.randomUUID();
         final TypedMap metadata = makeContext(id.toString());
@@ -153,21 +112,23 @@ public class MetricRecorderTest {
         final Number amount = Integer.valueOf(37);
 
         context.record(M_TIME, amount, Unit.MILLISECOND);
+        List<MemoryRecorder.Event> output = mr.output();
+
         assertEquals("Unexpected number of metrics output", 1, output.size());
-        final Event e1 = output.get(0);
+        final MemoryRecorder.Event e1 = output.get(0);
         assertEquals("Wrong metric", M_TIME, e1.metric);
         assertEquals("Wrong value", amount, e1.value);
         assertEquals("Wrong unit", Unit.MILLISECOND, e1.unit);
-        assertEquals("Wrong benchmark", metadata, e1.metadata);
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.metadata.get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.metadata());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.metadata().get(ContextData.ID));
 
         context.count(M_FAIL, 11);
         assertEquals("Unexpected number of metrics output", 2, output.size());
-        final Event e2 = output.get(1);
+        final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_FAIL, e2.metric);
         assertEquals("Wrong value", 11L, e2.value);
-        assertEquals("Wrong benchmark", metadata, e2.metadata);
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.metadata.get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.metadata());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.metadata().get(ContextData.ID));
     }
 
     @Test
@@ -176,13 +137,13 @@ public class MetricRecorderTest {
 
         MetricRecorder mr = new MetricRecorder() {
             @Override
-            protected void record(Metric a, Number b, Unit c, Instant d, TypedMap e) { }
+            protected void record(Metric a, Number b, Unit c, Instant d, Context e) { }
             @Override
-            protected void count(Metric a, long b, TypedMap c) { }
+            protected void count(Metric a, long b, Context c) { }
 
             @Override
-            protected void close(TypedMap metadata) {
-                closed.put(metadata, true);
+            protected void close(Context metadata) {
+                closed.put(metadata.metadata(), true);
             }
         };
 
@@ -205,4 +166,5 @@ public class MetricRecorderTest {
     private TypedMap makeContext(final String id) {
         return ImmutableTypedMap.Builder.with(ContextData.ID, id).build();
     }
+
 }
