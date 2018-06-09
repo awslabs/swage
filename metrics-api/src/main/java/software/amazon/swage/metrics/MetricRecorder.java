@@ -29,13 +29,13 @@ import software.amazon.swage.collection.TypedMap;
  * </ul>
  *
  * <p>The metrics captured are associated with the currently executing unit of
- * work (aka task) such as a service request, as captured by a context dimensions object.
+ * work (aka task) such as a service request, as captured by a context attributes object.
  * Recording a metric is done by sending a MetricRecorder instance the current
- * context dimensions and the specific event to record.
+ * context attributes and the specific event to record.
  *
- * <p>The MetricRecorder provides a Context abstraction wrapping the context dimensions
+ * <p>The MetricRecorder provides a Context abstraction wrapping the context attributes
  * and a reference to the MetricRecorder for convenient usage - metric-recording
- * tasks need only reference a Context object, with the context dimensions and
+ * tasks need only reference a Context object, with the context attributes and
  * MetricRecorder being handled by the task defining layer.
 
  * <p>A recorder instance may also have 'global' context associated with it, such
@@ -81,24 +81,51 @@ metricCtx.record(StandardMetric.Time, sometime, Unit.MILLISECOND);
  */
 public abstract class MetricRecorder {
 
+    private final class Context implements MetricContext {
+        private final TypedMap attributes;
+
+        private Context(TypedMap attributes) {
+            this.attributes = attributes;
+        }
+
+        @Override
+        public TypedMap attributes() {
+            return attributes;
+        }
+
+        @Override
+        public void record(Metric label, Number value, Unit unit, Instant time) {
+            MetricRecorder.this.record(label, value, unit, time, this);
+        }
+
+        @Override
+        public void count(Metric label, long delta) {
+            MetricRecorder.this.count(label, delta, this);
+        }
+
+        @Override
+        public void close() {
+            MetricRecorder.this.close(this);
+        }
+    }
+
     /**
-     * Construct a new Context object for the given dimensions.
+     * Construct a new Context object for the given attributes.
      *
-     * The returned Context is a light wrapper around the provided dimensions object.
-     * Context objects created with the same dimensions object will be functionally
+     * The returned Context is a light wrapper around the provided attributes object.
+     * Context objects created with the same attributes object will be functionally
      * equivalent, and MetricRecorder implementations are free to return the
-     * same object if called multiple times with the same dimensions object.
+     * same object if called multiple times with the same attributes object.
      * The logical context scope is defined by object identity on the context
-     * dimensions object.  Two context dimensions objects with the same values will be
+     * attributes object.  Two context attributes objects with the same values will be
      * treated as different contexts.
      *
      * @param metadata An object to be used for identifying the Context.
-     * @return A new Context object wrapping the provided dimensions object.
+     * @return A new Context object wrapping the provided attributes object.
      */
     public MetricContext context(TypedMap metadata) {
-        return new MetricContext(this, metadata);
+        return new Context(metadata);
     }
-
 
     /**
      * Record the value of a specific metric, as gauged at a specific time
@@ -111,7 +138,7 @@ public abstract class MetricRecorder {
      * @param value Gauged value, with units.
      * @param unit  Type of the value, e.g. seconds, percent, etc.
      * @param time  When the value was sampled.
-     * @param context Identifying dimensions about context the value belongs in.
+     * @param context Identifying attributes about context the value belongs in.
      */
     protected abstract void record(
             Metric label,
@@ -126,7 +153,7 @@ public abstract class MetricRecorder {
      * These are explicitly aggregated values, where only the total number of
      * occurrences in a context matter.
      * Examples include counting number of times a method is called, or keeping
-     * track of the number of errors encountered, or the amount of dimensions sent
+     * track of the number of errors encountered, or the amount of attributes sent
      * while in the given context.
      *
      * If you need to distinguish between occurrences of an event, or care that
@@ -151,7 +178,7 @@ public abstract class MetricRecorder {
      * will emit no more metric events.
      *
      * Once close() is called for a given context, the MetricRecorder may clean
-     * up, aggregate, and/or flush any dimensions associated with that context.
+     * up, aggregate, and/or flush any attributes associated with that context.
      *
      * After close() is called for a given context, any subsequent calls to this
      * recorder referencing that context will result in undefined behavior.
@@ -159,7 +186,7 @@ public abstract class MetricRecorder {
      * a case, but have no obligation to do so.
      *
      * The logical context scope is defined by object identity on the context
-     * dimensions object.  Two context dimensions objects with the same values will be
+     * attributes object.  Two context attributes objects with the same values will be
      * treated as different contexts.
      *
      * The default implementation of this method is a no-op.  MetricRecorder
@@ -170,5 +197,4 @@ public abstract class MetricRecorder {
      */
     protected void close(MetricContext context) {
     }
-
 }

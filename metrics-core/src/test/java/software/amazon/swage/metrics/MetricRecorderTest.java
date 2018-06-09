@@ -57,8 +57,8 @@ public class MetricRecorderTest {
         assertEquals("Wrong value", time, e1.value);
         assertEquals("Wrong unit", Unit.MILLISECOND, e1.unit);
         assertTrue("Wrong timestamp", e1.timestamp.equals(timestamp));
-        assertEquals("Wrong benchmark", metadata, e1.context.dimensions());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.dimensions().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.attributes());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.attributes().get(ContextData.ID));
 
         final Number load = Integer.valueOf(87);
         context.record(M_PERC, load, Unit.PERCENT, timestamp);
@@ -69,8 +69,8 @@ public class MetricRecorderTest {
         assertEquals("Wrong value", load, e2.value);
         assertEquals("Wrong unit", Unit.PERCENT, e2.unit);
         assertTrue("Wrong timestamp", e2.timestamp.equals(timestamp));
-        assertEquals("Wrong benchmark", metadata, e2.context.dimensions());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.dimensions().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.attributes());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.attributes().get(ContextData.ID));
     }
 
     @Test
@@ -88,8 +88,8 @@ public class MetricRecorderTest {
         final MemoryRecorder.Event e1 = output.get(0);
         assertEquals("Wrong metric", M_FAIL, e1.metric);
         assertEquals("Wrong value", 1L, e1.value);
-        assertEquals("Wrong benchmark", metadata, e1.context.dimensions());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.dimensions().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.attributes());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.attributes().get(ContextData.ID));
 
         context.count(M_FAIL, 3);
 
@@ -97,8 +97,8 @@ public class MetricRecorderTest {
         final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_FAIL, e2.metric);
         assertEquals("Wrong value", 3L, e2.value);
-        assertEquals("Wrong benchmark", metadata, e2.context.dimensions());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.dimensions().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.attributes());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.attributes().get(ContextData.ID));
     }
 
     @Test
@@ -119,16 +119,16 @@ public class MetricRecorderTest {
         assertEquals("Wrong metric", M_TIME, e1.metric);
         assertEquals("Wrong value", amount, e1.value);
         assertEquals("Wrong unit", Unit.MILLISECOND, e1.unit);
-        assertEquals("Wrong benchmark", metadata, e1.context.dimensions());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.dimensions().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e1.context.attributes());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e1.context.attributes().get(ContextData.ID));
 
         context.count(M_FAIL, 11);
         assertEquals("Unexpected number of metrics output", 2, output.size());
         final MemoryRecorder.Event e2 = output.get(1);
         assertEquals("Wrong metric", M_FAIL, e2.metric);
         assertEquals("Wrong value", 11L, e2.value);
-        assertEquals("Wrong benchmark", metadata, e2.context.dimensions());
-        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.dimensions().get(ContextData.ID));
+        assertEquals("Wrong benchmark", metadata, e2.context.attributes());
+        assertEquals("Wrong REQUEST_ID", id.toString(), e2.context.attributes().get(ContextData.ID));
     }
 
     @Test
@@ -143,7 +143,7 @@ public class MetricRecorderTest {
 
             @Override
             protected void close(MetricContext metadata) {
-                closed.put(metadata.dimensions(), true);
+                closed.put(metadata.attributes(), true);
             }
         };
 

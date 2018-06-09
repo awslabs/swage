@@ -34,7 +34,7 @@ import software.amazon.swage.metrics.Unit;
 /**
  * Simple MetricRecorder that sends metrics events to a file.
  *
- * The dimensions will be written to a file with the current time slice appended to
+ * The attributes will be written to a file with the current time slice appended to
  * the end of the name, and periodically rolled over to a new file.
  *
  * This implementation is bare-bones, and does not serialize to any
@@ -140,7 +140,7 @@ public class FileRecorder extends MetricRecorder {
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
-        serializeContext(sb, context.dimensions());
+        serializeContext(sb, context.attributes());
         sb.append(":")
           .append(String.valueOf(value))
           .append(unit.toString())
@@ -165,7 +165,7 @@ public class FileRecorder extends MetricRecorder {
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
-        serializeContext(sb, context.dimensions());
+        serializeContext(sb, context.attributes());
         sb.append(":count:")
           .append(delta)
           .append('\n');

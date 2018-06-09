@@ -1,6 +1,5 @@
 package software.amazon.swage.metrics;
 
-import java.io.Closeable;
 import java.time.Instant;
 
 import software.amazon.swage.collection.TypedMap;
@@ -15,29 +14,14 @@ import software.amazon.swage.collection.TypedMap;
  * A {MetricContext} is the primary interface used to record measurements.
  */
 // TODO: provide a childContext() mechanism?
-public final class MetricContext implements Closeable {
-    private final MetricRecorder recorder;
-    private final TypedMap dimensions;
-
+public interface MetricContext extends AutoCloseable {
     /**
-     * Create a new context for taking measurements.
+     * Returns the attributes and their values that identity the context in which measurements
+     * are being taken.
      *
-     * @param recorder   where measurments will be recorded
-     * @param dimensions the properties of this context
+     * @return the Context attributes
      */
-    public MetricContext(MetricRecorder recorder, TypedMap dimensions) {
-        this.recorder = recorder;
-        this.dimensions = dimensions;
-    }
-
-    /**
-     * Returns dimensions to associate with
-     *
-     * @return the Context dimensions
-     */
-    public TypedMap dimensions() {
-        return dimensions;
-    }
+    TypedMap attributes();
 
     /**
      * Record the value of a specific metric in this context, as gauged at a specific time.
@@ -47,9 +31,7 @@ public final class MetricContext implements Closeable {
      * @param unit  type of the value, e.g. seconds, percent, etc.
      * @param time  when the value was sampled
      */
-    public void record(Metric label, Number value, Unit unit, Instant time) {
-        recorder.record(label, value, unit, time, this);
-    }
+    void record(Metric label, Number value, Unit unit, Instant time);
 
     /**
      * Record a measurement at the current time.
@@ -60,7 +42,7 @@ public final class MetricContext implements Closeable {
      * @param value gauged value, with units.
      * @param unit  type of the value, e.g. seconds, percent, etc.
      */
-    public void record(Metric label, Number value, Unit unit) {
+    default void record(Metric label, Number value, Unit unit) {
         record(label, value, unit, Instant.now());
     }
 
@@ -78,9 +60,7 @@ public final class MetricContext implements Closeable {
      * @param label the metric being recorded
      * @param delta the change in the value
      */
-    public void count(Metric label, long delta) {
-        recorder.count(label, delta, this);
-    }
+    void count(Metric label, long delta);
 
     /**
      * Count a single occurrence of a metric.
@@ -89,14 +69,14 @@ public final class MetricContext implements Closeable {
      *
      * @param label the metric that occurred
      */
-    public void count(Metric label) {
+    default void count(Metric label) {
         count(label, 1L);
     }
 
     /**
      * Close this context, indicating that no more measurements will be taken.
      */
-    public void close() {
-        recorder.close(this);
-    }
+    @Override
+    void close();
 }
+

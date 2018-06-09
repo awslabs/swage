@@ -131,7 +131,7 @@ public class CloudWatchRecorder extends MetricRecorder {
      * using the default jitter and publish settings.
      *
      * @param namespace CloudWatch namespace to publish under.
-     * @param dimensionMapper Configuration specifying which dimensions to sent
+     * @param dimensionMapper Configuration specifying which attributes to sent
      *                        to CloudWatch for each metric event.
      * @return A CloudWatchRecorder instance that will automatically shutdown on JVM exit.
      */
@@ -193,7 +193,7 @@ public class CloudWatchRecorder extends MetricRecorder {
      *                  A value of 0 will provide no jitter.
      * @param publishFrequency Batch up and publish at this interval, in seconds.
      *                         Suggested value of 60, for one minute aggregation.
-     * @param dimensionMapper Configuration specifying which dimensions to sent
+     * @param dimensionMapper Configuration specifying which attributes to sent
      *                        to CloudWatch for each metric event.
      */
     public CloudWatchRecorder(
@@ -291,7 +291,7 @@ public class CloudWatchRecorder extends MetricRecorder {
         // event lost. Rather than having one timestamp apply to all, we just
         // drop the time information and use the timestamp of aggregation.
 
-        aggregator.add(context.dimensions(),
+        aggregator.add(context.attributes(),
                        label,
                        value.doubleValue(),
                        unitMapping.get(unit));
@@ -306,7 +306,7 @@ public class CloudWatchRecorder extends MetricRecorder {
             return;
         }
 
-        aggregator.add(context.dimensions(),
+        aggregator.add(context.attributes(),
                        label,
                        Long.valueOf(delta).doubleValue(),
                        StandardUnit.Count);
@@ -345,14 +345,14 @@ public class CloudWatchRecorder extends MetricRecorder {
 
     private void sendAggregatedData() {
 
-        // Grab all the current aggregated dimensions, resetting
+        // Grab all the current aggregated attributes, resetting
         // the aggregator to empty in the process
         List<MetricDatum> metricData = aggregator.flush();
         if(metricData.isEmpty()) {
             return;
         }
 
-        // Send the dimensions in batches to adhere to CloudWatch limitation on the
+        // Send the attributes in batches to adhere to CloudWatch limitation on the
         // number of MetricDatum objects per request, see:
         // http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
         int begin = 0;

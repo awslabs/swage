@@ -69,8 +69,8 @@ public class ScopedMetricsTest {
                               eq(time),
                               eq(Unit.MILLISECOND),
                               argThat(t -> Instant.now().plusNanos(1).isAfter(t)),
-                              argThat(t -> metadata.equals(t.dimensions())));
-            inOrder.verify(mr).record(eq(M_PERC), eq(load), eq(Unit.PERCENT), eq(timestamp), argThat(t -> metadata.equals(t.dimensions())));
+                              argThat(t -> metadata.equals(t.attributes())));
+            inOrder.verify(mr).record(eq(M_PERC), eq(load), eq(Unit.PERCENT), eq(timestamp), argThat(t -> metadata.equals(t.attributes())));
 
             final TypedMap subctx = ContextData.withId("deadbeef").build();
             try (AutoCloseable sub = ScopedMetrics.open(subctx)) {
@@ -81,7 +81,7 @@ public class ScopedMetricsTest {
                                  eq(emit),
                                  eq(Unit.SECOND),
                                  argThat(t -> Instant.now().plusNanos(1).isAfter(t)),
-                                 argThat(t -> subctx.equals(t.dimensions())));
+                                 argThat(t -> subctx.equals(t.attributes())));
             }
         }
 
@@ -100,17 +100,17 @@ public class ScopedMetricsTest {
         try (AutoCloseable ig = ScopedMetrics.open(metadata)) {
             ScopedMetrics.count(M_FAIL);
         }
-        inOrder.verify(mr).count(eq(M_FAIL), eq(1L), argThat(t -> t.dimensions().equals(metadata)));
+        inOrder.verify(mr).count(eq(M_FAIL), eq(1L), argThat(t -> t.attributes().equals(metadata)));
 
         final TypedMap diffdata = ContextData.withId(UUID.randomUUID().toString()).build();
         try (AutoCloseable ig = ScopedMetrics.open(diffdata)) {
             ScopedMetrics.count(M_FAIL, 3);
-            inOrder.verify(mr).count(eq(M_FAIL), eq(3L), argThat(t -> t.dimensions().equals(diffdata)));
+            inOrder.verify(mr).count(eq(M_FAIL), eq(3L), argThat(t -> t.attributes().equals(diffdata)));
 
             final TypedMap subctx = ContextData.withId("deadbeef").build();
             try (AutoCloseable sub = ScopedMetrics.open(subctx)) {
                 ScopedMetrics.count(M_TIME);
-                inOrder.verify(mr).count(eq(M_TIME), eq(1L), argThat(t -> t.dimensions().equals(subctx)));
+                inOrder.verify(mr).count(eq(M_TIME), eq(1L), argThat(t -> t.attributes().equals(subctx)));
             }
         }
     }
@@ -132,8 +132,8 @@ public class ScopedMetricsTest {
             ScopedMetrics.record(M_TIME, amount, Unit.MILLISECOND, timestamp);
             ScopedMetrics.count(M_FAIL, 11);
         }
-        inOrder.verify(mr).record(eq(M_TIME), eq(amount), eq(Unit.MILLISECOND), eq(timestamp), argThat(t -> metadata.equals(t.dimensions())));
-        inOrder.verify(mr).count(eq(M_FAIL), eq(11L), argThat(t -> metadata.equals(t.dimensions())));
+        inOrder.verify(mr).record(eq(M_TIME), eq(amount), eq(Unit.MILLISECOND), eq(timestamp), argThat(t -> metadata.equals(t.attributes())));
+        inOrder.verify(mr).count(eq(M_FAIL), eq(11L), argThat(t -> metadata.equals(t.attributes())));
     }
 
 }
