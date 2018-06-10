@@ -12,11 +12,14 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package software.amazon.swage.metrics;
+package software.amazon.swage.metrics.record;
 
 import java.time.Instant;
 
 import software.amazon.swage.collection.TypedMap;
+import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
+import software.amazon.swage.metrics.Unit;
 
 /**
  * MetricRecorder is used to record the events that occur as an application is
@@ -79,53 +82,74 @@ metricCtx.record(StandardMetric.Time, sometime, Unit.MILLISECOND);
  * TODO: JSR-305 @ThreadSafe
  * TODO: add explicit shutdown/lifecycle management?
  */
-public abstract class MetricRecorder {
+public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
 
-    private final class Context implements MetricContext {
+    /**
+     * Recorder-specific cpntext for taking measurements. Combines the user-supplied
+     * attributes with any additional metadata recorder implementations may require.
+     */
+    public static class RecorderContext {
         private final TypedMap attributes;
 
-        private Context(TypedMap attributes) {
+        /**
+         * Constructor mandating the values needed for the emitter-specific public interface.
+         *
+         * @param attributes the user-supplied attributes of the measurement context
+         */
+        public RecorderContext(TypedMap attributes) {
             this.attributes = attributes;
         }
 
-        @Override
+        /**
+         * @return the user-supplied attributes of the measurement context
+         */
         public TypedMap attributes() {
             return attributes;
-        }
-
-        @Override
-        public void record(Metric label, Number value, Unit unit, Instant time) {
-            MetricRecorder.this.record(label, value, unit, time, this);
-        }
-
-        @Override
-        public void count(Metric label, long delta) {
-            MetricRecorder.this.count(label, delta, this);
-        }
-
-        @Override
-        public void close() {
-            MetricRecorder.this.close(this);
         }
     }
 
     /**
      * Construct a new Context object for the given attributes.
+     * Create a new context for recording metrics. The supplied attributes define the
+     * context in which the measurements are being taken, for example, the system where
+     * the application is running, a task of execution such as a request, or the physical
+     * environment such as location.
      *
-     * The returned Context is a light wrapper around the provided attributes object.
-     * Context objects created with the same attributes object will be functionally
-     * equivalent, and MetricRecorder implementations are free to return the
-     * same object if called multiple times with the same attributes object.
-     * The logical context scope is defined by object identity on the context
-     * attributes object.  Two context attributes objects with the same values will be
-     * treated as different contexts.
-     *
-     * @param metadata An object to be used for identifying the Context.
-     * @return A new Context object wrapping the provided attributes object.
+     * @param attributes the attributes describing the context
+     * @return a context for recording metrics
      */
-    public MetricContext context(TypedMap metadata) {
-        return new Context(metadata);
+    public MetricContext context(TypedMap attributes) {
+        R context = newRecorderContext(attributes);
+        return new MetricContext() {
+            @Override
+            public TypedMap attributes() {
+                return context.attributes();
+            }
+
+            @Override
+            public void record(Metric label, Number value, Unit unit, Instant time) {
+                MetricRecorder.this.record(label, value, unit, time, context);
+            }
+
+            @Override
+            public void count(Metric label, long delta) {
+                MetricRecorder.this.count(label, delta, context);
+            }
+
+            @Override
+            public void close() {
+                MetricRecorder.this.close(context);
+            }
+        };
     }
+
+    /**
+     * Factory method for creating instances RecorderContext used by this recorder.
+     *
+     * @param attributes the user-supplied attributes of the measurement context
+     * @return a RecorderContext used by this implementation
+     */
+    protected abstract R newRecorderContext(TypedMap attributes);
 
     /**
      * Record the value of a specific metric, as gauged at a specific time
@@ -145,7 +169,7 @@ public abstract class MetricRecorder {
             Number value,
             Unit unit,
             Instant time,
-            MetricContext context);
+            R context);
 
     /**
      * Count the increase or decrease of a metric in the given context.
@@ -170,7 +194,7 @@ public abstract class MetricRecorder {
      * @param delta the increase (or decrease) in the value
      * @param context the context the value belongs in.
      */
-    protected abstract void count(Metric label, long delta, MetricContext context);
+    protected abstract void count(Metric label, long delta, R context);
 
 
     /**
@@ -195,6 +219,6 @@ public abstract class MetricRecorder {
      *
      * @param context The context being closed.
      */
-    protected void close(MetricContext context) {
+    protected void close(R context) {
     }
 }

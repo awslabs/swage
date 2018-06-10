@@ -17,7 +17,7 @@ package software.amazon.swage.metrics.jmx;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.MetricContext;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.record.MetricRecorder;
 import software.amazon.swage.metrics.StandardContext;
 import software.amazon.swage.metrics.jmx.sensor.SenseException;
 import software.amazon.swage.metrics.jmx.sensor.Sensor;

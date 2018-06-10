@@ -14,30 +14,28 @@
  */
 package software.amazon.swage.metrics.jmx;
 
-import software.amazon.swage.collection.TypedMap;
-import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricContext;
-import software.amazon.swage.metrics.MetricRecorder;
-import software.amazon.swage.metrics.StandardContext;
-import software.amazon.swage.metrics.Unit;
-import software.amazon.swage.metrics.jmx.sensor.Sensor;
-import org.junit.Test;
-import org.mockito.ArgumentMatcher;
-
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.junit.Test;
+
 import static org.junit.Assert.assertTrue;
+import org.mockito.ArgumentMatcher;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import software.amazon.swage.collection.TypedMap;
+import software.amazon.swage.metrics.MetricContext;
+import software.amazon.swage.metrics.StandardContext;
+import software.amazon.swage.metrics.jmx.sensor.Sensor;
+import software.amazon.swage.metrics.record.MetricRecorder;
+import software.amazon.swage.metrics.record.NullRecorder;
 
 /**
  */
@@ -56,27 +54,9 @@ public class MXBeanPollerTest {
         }
     }
 
-    // A stub MetricRecorder implementation, used instead of a mock to avoid
-    // issues with final stuff.
-    private static final class StubRecorder extends MetricRecorder {
-        @Override
-        protected void record(
-                final Metric label,
-                final Number value,
-                final Unit unit,
-                final Instant time,
-                final MetricContext context)
-        {
-        }
-
-        @Override
-        protected void count(final Metric label, final long delta, final MetricContext context) {
-        }
-    }
-
     @Test
     public void senses() throws Exception {
-        final MetricRecorder recorder = new StubRecorder();
+        final MetricRecorder recorder = new NullRecorder();
 
         final Sensor sensor1 = mock(Sensor.class);
         final Sensor sensor2 = mock(Sensor.class);
@@ -102,7 +82,7 @@ public class MXBeanPollerTest {
     public void shutdown() throws Exception {
         final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-        MXBeanPoller poller = new MXBeanPoller(executor, new StubRecorder(), 5, Collections.emptyList());
+        MXBeanPoller poller = new MXBeanPoller(executor, new NullRecorder(), 5, Collections.emptyList());
         poller.shutdown();
 
         assertTrue("Executor not shutdown on poller shutdown", executor.isShutdown());

@@ -27,9 +27,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricContext;
-import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
 /**
  * Simple MetricRecorder that sends metrics events to a file.
@@ -43,7 +42,7 @@ import software.amazon.swage.metrics.Unit;
  *
  * TODO: output in a useful format
  */
-public class FileRecorder extends MetricRecorder {
+public class FileRecorder extends MetricRecorder<MetricRecorder.RecorderContext> {
 
     private static final Logger log = LogManager.getLogger(FileRecorder.class);
 
@@ -124,12 +123,17 @@ public class FileRecorder extends MetricRecorder {
     }
 
     @Override
+    protected RecorderContext newRecorderContext(TypedMap attributes) {
+        return new RecorderContext(attributes);
+    }
+
+    @Override
     protected void record(
             final Metric label,
             final Number value,
             final Unit unit,
             final Instant timestamp,
-            final MetricContext context)
+            final RecorderContext context)
     {
         if (!running.get()) {
             log.debug("record called on shutdown recorder");
@@ -154,7 +158,7 @@ public class FileRecorder extends MetricRecorder {
     protected void count(
             final Metric label,
             final long delta,
-            final MetricContext context)
+            final RecorderContext context)
     {
         if (!running.get()) {
             log.debug("count called on shutdown recorder");

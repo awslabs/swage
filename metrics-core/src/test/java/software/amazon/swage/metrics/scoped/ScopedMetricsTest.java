@@ -28,7 +28,7 @@ import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.MetricContext;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.record.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 
 
@@ -41,9 +41,14 @@ public class ScopedMetricsTest {
     // Using this with spy to avoid complex mocking required for Context behavior.
     private static class TestRecorder extends MetricRecorder {
         @Override
-        protected void record(Metric m, Number v, Unit u, Instant t, MetricContext c) {}
+        protected RecorderContext newRecorderContext(TypedMap attributes) {
+            return new RecorderContext(attributes);
+        }
+
         @Override
-        protected void count(Metric m, long d, MetricContext c) {}
+        protected void record(Metric m, Number v, Unit u, Instant t, RecorderContext c) {}
+        @Override
+        protected void count(Metric m, long d, RecorderContext c) {}
     }
 
     @Test

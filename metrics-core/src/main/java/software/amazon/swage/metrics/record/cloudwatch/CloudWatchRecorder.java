@@ -33,11 +33,11 @@ import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricContext;
-import software.amazon.swage.metrics.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
 /**
  * MetricRecorder that sends all metric events to CloudWatch.
@@ -75,7 +75,7 @@ import software.amazon.swage.metrics.Unit;
  * subsequent calls will have more metrics aggregated so we can make fewer
  * calls to CloudWatch.
  */
-public class CloudWatchRecorder extends MetricRecorder {
+public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderContext> {
 
     private static final Logger log = LogManager.getLogger(CloudWatchRecorder.class);
 
@@ -274,12 +274,17 @@ public class CloudWatchRecorder extends MetricRecorder {
     }
 
     @Override
+    protected RecorderContext newRecorderContext(TypedMap attributes) {
+        return new RecorderContext(attributes);
+    }
+
+    @Override
     protected void record(
             final Metric label,
             final Number value,
             final Unit unit,
             final Instant time,
-            final MetricContext context)
+            final RecorderContext context)
     {
         if (!running.get()) {
             log.debug("record called on shutdown recorder");
@@ -298,7 +303,7 @@ public class CloudWatchRecorder extends MetricRecorder {
     }
 
     @Override
-    public void count(final Metric label, final long delta, final MetricContext context)
+    public void count(final Metric label, final long delta, final RecorderContext context)
     {
         if (!running.get()) {
             log.debug("count called on shutdown recorder");

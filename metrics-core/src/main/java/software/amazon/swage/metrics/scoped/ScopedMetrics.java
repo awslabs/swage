@@ -17,7 +17,7 @@ package software.amazon.swage.metrics.scoped;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.MetricContext;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.record.MetricRecorder;
 import software.amazon.swage.metrics.Unit;
 import software.amazon.swage.threadcontext.ThreadContext;
 
