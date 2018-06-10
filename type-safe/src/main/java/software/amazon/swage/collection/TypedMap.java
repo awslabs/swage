@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -156,6 +157,22 @@ public interface TypedMap extends Iterable<TypedMap.Entry> {
             return Optional.empty();
         }
         return Optional.of(value);
+    }
+
+    /**
+     * Returns the data stored for the given key, or if not present the value from the supplier.
+     * @param key the key to retrive data for
+     * @param supplier a supplier for the default value
+     * @param <T> the data type
+     * @return the data stored for the key, or the default value from the supplier
+     */
+    default <T> T getOrDefault(Key<T> key, Supplier<T> supplier) {
+        T value = get(key);
+        if (value == null) {
+            return supplier.get();
+        } else {
+            return value;
+        }
     }
 
     /**

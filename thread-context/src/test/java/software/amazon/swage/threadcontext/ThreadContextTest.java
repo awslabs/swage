@@ -51,6 +51,12 @@ public class ThreadContextTest {
     }
 
     @Test
+    public void defaultIsSuppliedForMissingKey() {
+        ThreadContext context = ThreadContext.emptyContext();
+        assertEquals("hello", context.getOrDefault(REQUEST_ID, () -> "hello"));
+    }
+
+    @Test
     public void keyValuesAreAdditive() {
         ThreadContext empty = ThreadContext.emptyContext();
         ThreadContext oneKey = empty.with(REQUEST_ID, "rid");

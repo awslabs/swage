@@ -37,12 +37,7 @@ public final class ThreadLocalMetrics {
      * @return the MetricContext associated with the current Thread
      */
     public static MetricContext current() {
-        MetricContext context = ThreadContext.current().get(METRIC_CONTEXT);
-        if (context == null) {
-            return NULL_CONTEXT;
-        } else {
-            return context;
-        }
+        return ThreadContext.current().getOrDefault(METRIC_CONTEXT, () -> NULL_CONTEXT);
     }
 
     // Suppress construction.
