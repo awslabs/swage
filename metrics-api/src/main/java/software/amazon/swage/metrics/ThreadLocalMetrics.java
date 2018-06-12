@@ -1,8 +1,5 @@
 package software.amazon.swage.metrics;
 
-import java.time.Instant;
-
-import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.threadcontext.ThreadContext;
 
 /**
@@ -14,33 +11,15 @@ public final class ThreadLocalMetrics {
      */
     public static final ThreadContext.Key<MetricContext> METRIC_CONTEXT = ThreadContext.key(MetricContext.class);
 
-    private static final MetricContext NULL_CONTEXT = new MetricContext() {
-        @Override
-        public TypedMap attributes() {
-            return TypedMap.empty();
-        }
-
-        @Override
-        public void record(Metric label, Number value, Unit unit, Instant time) {
-        }
-
-        @Override
-        public void count(Metric label, long delta) {
-        }
-
-        @Override
-        public void close() {
-        }
-    };
-
     /**
      * @return the MetricContext associated with the current Thread
      */
     public static MetricContext current() {
-        return ThreadContext.current().getOrDefault(METRIC_CONTEXT, () -> NULL_CONTEXT);
+        return ThreadContext.current().getOrDefault(METRIC_CONTEXT, NullContext::empty);
     }
 
     // Suppress construction.
     private ThreadLocalMetrics() {
     }
+
 }
