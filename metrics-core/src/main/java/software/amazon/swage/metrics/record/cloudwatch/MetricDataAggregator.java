@@ -34,17 +34,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link MetricDatum} appropriate to send to CloudWatch.
  *
  * Allows adding metrics for a period of time, then flushing all the aggregated
- * attributes, then accumulating more.
+ * data, then accumulating more.
  * <p>
  * Package-private as this is intended purely as an implementation detail of
  * the CloudWatchRecorder. The implementation is specific to how it is used
  * by the recorder, and does not currently support "general purpose"
- * aggregation of metric attributes/MetricDatums.
+ * aggregation of metric data/MetricDatums.
  * <p>
  * Metrics are aggregated by namespace, metricName, attributes, and unit.
  * Matching metrics events will be added together to form a single
  * {@link StatisticSet}.
- * No aggregation across disparate attributes is supported.
+ * No aggregation across disparate dimensions is supported.
  * <p>
  * Dimensions to use for a metric are determined by a {@link DimensionMapper},
  * with values pulled from the current metric context.
@@ -66,7 +66,7 @@ class MetricDataAggregator {
     /**
      * Add a metric event to be aggregated.
      * Events with the same name, unit, and attributes will have their values
-     * aggregated into {@link StatisticSet}s, with the aggregated attributes
+     * aggregated into {@link StatisticSet}s, with the aggregated data
      * available via {@link #flush}.
      *
      * @param context Metric context to use for dimension information
@@ -97,15 +97,15 @@ class MetricDataAggregator {
     /**
      * Flush all the current aggregated MetricDatum and return as a list.
      * This is safe to call concurrently with {@link #add}.
-     * All attributes added prior to a flush call will be included in the returned aggregate.
-     * Any attributes added after the flush call returns will be included in a subsequent flush.
+     * All data added prior to a flush call will be included in the returned aggregate.
+     * Any data added after the flush call returns will be included in a subsequent flush.
      * Data added while a flush call is processing may be included in the current flush
      * or a subsequent flush, but will not be included twice.
      *
-     * The timestamp on the aggregated attributes will be the time it was flushed,
+     * The timestamp on the aggregated data will be the time it was flushed,
      * not the time of any of the original metric events.
      *
-     * @return list of all attributes aggregated since the last flush
+     * @return list of all data aggregated since the last flush
      */
     public List<MetricDatum> flush() {
         if (statisticsMap.size() == 0) {
@@ -116,7 +116,7 @@ class MetricDataAggregator {
         // at this time in the statisticsMap.
         // Note that this iterates over the key set of the underlying map, and
         // removes keys from the map at the same time. It is possible keys may
-        // be added during this iteration, or attributes for keys modified between
+        // be added during this iteration, or data for keys modified between
         // a key being chosen for iteration and being removed from the map.
         // This is ok.  Any new keys will be picked up on subsequent flushes.
         //TODO: use two maps and swap between, to ensure 'perfect' segmentation?
@@ -151,7 +151,7 @@ class MetricDataAggregator {
      * the same:
      *  namespace
      *  metric name
-     *  attributes
+     *  dimensions
      *  unit
      */
     private static final class DatumKey {

@@ -33,7 +33,7 @@ import software.amazon.swage.metrics.record.MetricRecorder;
 /**
  * Simple MetricRecorder that sends metrics events to a file.
  *
- * The attributes will be written to a file with the current time slice appended to
+ * The data will be written to a file with the current time slice appended to
  * the end of the name, and periodically rolled over to a new file.
  *
  * This implementation is bare-bones, and does not serialize to any

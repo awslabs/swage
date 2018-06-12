@@ -29,10 +29,10 @@ import java.util.Set;
 
 /**
  * Logic for mapping a metric event and associated context to a set of
- * attributes in CloudWatch.
+ * dimensions in CloudWatch.
  *
- * CloudWatch uses attributes as a filtering mechanism for viewing metric
- * events, and requires the client to specify the attributes associated
+ * CloudWatch uses dimensions as a filtering mechanism for viewing metric
+ * events, and requires the client to specify the dimensions associated
  * with an event when recording it in CloudWatch. An instance of this class
  * contains the desired dimension mappings for an application, to ensure that
  * metric events are filtered as desired.
@@ -47,7 +47,7 @@ import java.util.Set;
  * does a lookup based on the stored information.  Ideally every event recorded
  * would send with it all available context information, and a separate system
  * (perhaps CloudWatch, perhaps something sitting in front) would allow those
- * consuming the attributes to filter as needed.
+ * consuming the data to filter as needed.
  *
  * A DimensionMapper should be configured at application startup/configuration,
  * like:
@@ -55,12 +55,12 @@ import java.util.Set;
  * {@code
 DimensionMapper.Builder builder = new DimensionMapper.Builder();
 
-// Some attributes may be required for every metric event
-// If every metric can/should share the same attributes, configuring global
-// attributes may be all that is required.
+// Some dimensions may be required for every metric event
+// If every metric can/should share the same dimensions, configuring global
+// dimensions may be all that is required.
 builder.addGlobalDimension(ContextData.ID);
 
-// Specific metrics may have their own distinct set of attributes
+// Specific metrics may have their own distinct set of dimensions
 builder.addMetric(StandardMetric.TIME,
                   Arrays.asList(StandardContext.OPERATION, SpecificContext.SOME_DIMENSION));
 

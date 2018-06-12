@@ -85,7 +85,7 @@ metricCtx.record(StandardMetric.Time, sometime, Unit.MILLISECOND);
 public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
 
     /**
-     * Recorder-specific cpntext for taking measurements. Combines the user-supplied
+     * Recorder-specific context for taking measurements. Combines the user-supplied
      * attributes with any additional metadata recorder implementations may require.
      */
     public static class RecorderContext {
