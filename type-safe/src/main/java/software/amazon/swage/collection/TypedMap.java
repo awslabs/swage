@@ -166,7 +166,7 @@ public interface TypedMap extends Iterable<TypedMap.Entry> {
      * @param <T> the data type
      * @return the data stored for the key, or the default value from the supplier
      */
-    default <T> T getOrDefault(Key<T> key, Supplier<T> supplier) {
+    default <T> T getOrElseGet(Key<T> key, Supplier<T> supplier) {
         T value = get(key);
         if (value == null) {
             return supplier.get();

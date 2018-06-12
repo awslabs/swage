@@ -114,8 +114,8 @@ public final class ThreadContext {
      * @param <V>      the type of value
      * @return the key's value, or the default from the supplier
      */
-    public <V> V getOrDefault(Key<V> key, Supplier<V> supplier) {
-        return values.getOrDefault(key.key, supplier);
+    public <V> V getOrElseGet(Key<V> key, Supplier<V> supplier) {
+        return values.getOrElseGet(key.key, supplier);
     }
 
     /**
