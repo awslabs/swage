@@ -16,7 +16,8 @@ package software.amazon.swage.metrics.jmx;
 
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
+import software.amazon.swage.metrics.record.MetricRecorder;
 import software.amazon.swage.metrics.StandardContext;
 import software.amazon.swage.metrics.jmx.sensor.SenseException;
 import software.amazon.swage.metrics.jmx.sensor.Sensor;
@@ -35,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Provides MBeans integration for metrics, polling a set of M(X)Beans and
- * sending data to the configured metric sink.
+ * sending attributes to the configured metric sink.
  * This provides a mechanism to expose periodic health and utilization statistics in your
  * standard metrics logging.
  *
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * interval and record the measurements.  Each Sensor is associated with an
  * MBean, specialized to read and interpret the values on the bean.
  *
- * Sensors are not required to pull data from MBeans, but are designed to do so.
+ * Sensors are not required to pull attributes from MBeans, but are designed to do so.
  *
  */
 public class MXBeanPoller {
@@ -162,9 +163,9 @@ public class MXBeanPoller {
 
     private void runSensors() {
 
-        //TODO: should there be per-emit context data?
+        //TODO: should there be per-emit context attributes?
         //TODO: or should we have one Context and only close at the very end?
-        MetricRecorder.Context metricContext = metricRecorder.context(this.updaterContext);
+        MetricContext metricContext = metricRecorder.context(this.updaterContext);
 
         //TODO: emit each sensor on its own scheduled thread instead of all synchronously?
         for(Sensor sensor : sensors) {

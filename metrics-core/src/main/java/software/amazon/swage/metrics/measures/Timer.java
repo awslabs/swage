@@ -15,7 +15,7 @@
 package software.amazon.swage.metrics.measures;
 
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.time.Instant;
@@ -33,14 +33,14 @@ import java.time.Instant;
  */
 public class Timer implements AutoCloseable {
 
-    private final MetricRecorder.Context context;
+    private final MetricContext context;
     private final Metric label;
 
     //TODO: explicit start method?
     private final long startTime = System.nanoTime();
 
     public Timer(
-            final MetricRecorder.Context context,
+            final MetricContext context,
             final Metric label)
     {
         this.context = context;

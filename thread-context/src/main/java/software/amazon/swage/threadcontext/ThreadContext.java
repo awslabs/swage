@@ -14,13 +14,13 @@
  */
 package software.amazon.swage.threadcontext;
 
-import software.amazon.swage.collection.ImmutableTypedMap;
-import software.amazon.swage.collection.TypedMap;
-
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
+
+import software.amazon.swage.collection.ImmutableTypedMap;
+import software.amazon.swage.collection.TypedMap;
 
 /**
  * A holder for contextual information that can be retrieved based on the currently executing Thread.
@@ -104,6 +104,18 @@ public final class ThreadContext {
      */
     public <V> V get(Key<V> key) {
         return values.get(key.key);
+    }
+
+    /**
+     * Returns the value for a key in this context, or a default if not set
+     *
+     * @param key      the key to look up
+     * @param supplier supplier used to provide the default if the key is not present
+     * @param <V>      the type of value
+     * @return the key's value, or the default from the supplier
+     */
+    public <V> V getOrElseGet(Key<V> key, Supplier<V> supplier) {
+        return values.getOrElseGet(key.key, supplier);
     }
 
     /**

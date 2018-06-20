@@ -15,7 +15,7 @@
 package software.amazon.swage.metrics.jmx.sensor;
 
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.lang.management.ManagementFactory;
@@ -39,7 +39,7 @@ public class MemorySensor implements Sensor {
     public static final Metric NON_HEAP_USED = Metric.define("NonHeapMemoryUse");
 
     @Override
-    public void sense(final MetricRecorder.Context metricContext)
+    public void sense(final MetricContext metricContext)
     {
         MemoryMXBean mxBean = ManagementFactory.getMemoryMXBean();
 
@@ -47,7 +47,7 @@ public class MemorySensor implements Sensor {
         reportNonHeapUsage(mxBean, metricContext);
     }
 
-    private void reportHeapUsage(MemoryMXBean memoryMxBean, MetricRecorder.Context metricContext) {
+    private void reportHeapUsage(MemoryMXBean memoryMxBean, MetricContext metricContext) {
         MemoryUsage usage = memoryMxBean.getHeapMemoryUsage();
 
         long used = usage.getUsed();
@@ -62,7 +62,7 @@ public class MemorySensor implements Sensor {
         }
     }
 
-    private void reportNonHeapUsage(MemoryMXBean memoryMxBean, MetricRecorder.Context metricContext) {
+    private void reportNonHeapUsage(MemoryMXBean memoryMxBean, MetricContext metricContext) {
         MemoryUsage usage = memoryMxBean.getNonHeapMemoryUsage();
 
         long used = usage.getUsed();

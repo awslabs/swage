@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * by the recorder, and does not currently support "general purpose"
  * aggregation of metric data/MetricDatums.
  * <p>
- * Metrics are aggregated by namespace, metricName, dimensions, and unit.
+ * Metrics are aggregated by namespace, metricName, attributes, and unit.
  * Matching metrics events will be added together to form a single
  * {@link StatisticSet}.
  * No aggregation across disparate dimensions is supported.
@@ -65,7 +65,7 @@ class MetricDataAggregator {
 
     /**
      * Add a metric event to be aggregated.
-     * Events with the same name, unit, and dimensions will have their values
+     * Events with the same name, unit, and attributes will have their values
      * aggregated into {@link StatisticSet}s, with the aggregated data
      * available via {@link #flush}.
      *

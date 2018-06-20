@@ -17,7 +17,7 @@ package software.amazon.swage.metrics.jmx.sensor;
 import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
-import software.amazon.swage.metrics.MetricRecorder;
+import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
 import java.io.IOException;
@@ -52,7 +52,7 @@ public class DiskUsageSensor implements Sensor {
     }
 
     @Override
-    public void sense(final MetricRecorder.Context metricContext) throws SenseException
+    public void sense(final MetricContext metricContext) throws SenseException
     {
         try {
             // Determine the file store for the directory the JVM was started in

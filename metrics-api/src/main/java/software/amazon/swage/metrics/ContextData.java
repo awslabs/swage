@@ -18,23 +18,23 @@ import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 
 /**
- * Builder for data carried with the context under which a metric is reported.
+ * Builder for attributes carried with the context under which a metric is reported.
  *
  * <p>
- * Roughly equivalent to a request context, this is the metadata associated with
+ * Roughly equivalent to a request context, this is the attributes associated with
  * a metric context that allows relations and aggregations between events.
  * Things like request id, tracing id, etc. will be carried here.
  *
  * <p>
  * Built instances are immutable.  Metric recording will use
- * the data across threads as needed, and relies on the data being
+ * the attributes across threads as needed, and relies on the attributes being
  * unchanged for a particular Context.
  *
  * <p>
  * Different application domains may extend the builder to facilitate adding
- * the appropriate data.
+ * the appropriate attributes.
  *
- * A domain-specific data builder might look like:
+ * A domain-specific attributes builder might look like:
  * <pre>{@code
 public class DomainSpecificData extends ContextData {
     public static final TypedMap.Key<String> MARKETPLACE = TypedMap.key("marketplace", String.class);
@@ -42,9 +42,9 @@ public class DomainSpecificData extends ContextData {
     public static final TypedMap.Key<String> OPERATION   = TypedMap.key("operation", String.class);
     public static final TypedMap.Key<String> PROGRAM     = TypedMap.key("programName", String.class);
 
-    public static DomainSpecificData from(TypedMap data) {
+    public static DomainSpecificData from(TypedMap attributes) {
         DomainSpecificData b = new DomainSpecificData();
-        data.iterator().forEachRemaining((e) -> b.add(e.getKey(), e));
+        attributes.iterator().forEachRemaining((e) -> b.add(e.getKey(), e));
         return b;
     }
 

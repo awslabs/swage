@@ -118,7 +118,7 @@ public class DimensionMapper {
     }
 
     /**
-     * Pull desired info out of the metric context data and convert to
+     * Pull desired info out of the metric context attributes and convert to
      * CloudWatch {@link Dimension} objects, according to the filter mapping
      * defined.
      *
@@ -126,7 +126,7 @@ public class DimensionMapper {
      * the dimension will be added with a value of "null".
      *
      * @param metric Metric being sent
-     * @param context TypedMap containing metric context data
+     * @param context TypedMap containing metric context attributes
      * @return A list of Dimensions appropriate to send to CloudWatch
      */
     public List<Dimension> getDimensions(final Metric metric, final TypedMap context)
