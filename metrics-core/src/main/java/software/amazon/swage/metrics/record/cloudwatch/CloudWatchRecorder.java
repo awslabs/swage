@@ -108,6 +108,70 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
 
     private final MetricDataAggregator aggregator;
 
+    public static final class Builder {
+        private String namespace;
+        private boolean autoShutdown = false;
+        private AmazonCloudWatch client = AmazonCloudWatchClientBuilder.defaultClient();
+        private DimensionMapper dimensionMapper = DEFAULT_DIMENSIONS;
+        private int maxJitter = DEFAULT_JITTER;
+        private int publishFrequency = DEFAULT_PUBLISH_FREQ;
+        private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
+        public Builder namespace(String namespace) {
+            this.namespace = namespace;
+            return this;
+        }
+
+        public Builder dimensionMapper(DimensionMapper dimensionMapper) {
+            this.dimensionMapper = dimensionMapper;
+            return this;
+        }
+
+        public Builder client(AmazonCloudWatch client) {
+            this.client = client;
+            return this;
+        }
+
+        public Builder maxJitter(int maxJitter) {
+            this.maxJitter = maxJitter;
+            return this;
+        }
+
+        public Builder publishFrequency(int publishFrequency) {
+            this.publishFrequency = publishFrequency;
+            return this;
+        }
+
+        public Builder autoShutdown(boolean autoShutdown) {
+            this.autoShutdown = autoShutdown;
+            return this;
+        }
+
+        public Builder scheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
+            this.scheduledExecutorService = scheduledExecutorService;
+            return this;
+        }
+
+        public CloudWatchRecorder build() {
+            CloudWatchRecorder recorder = new CloudWatchRecorder(
+                    client,
+                    namespace,
+                    maxJitter,
+                    publishFrequency,
+                    dimensionMapper,
+                    scheduledExecutorService
+            );
+
+            if (this.autoShutdown) {
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    recorder.shutdown();
+                }));
+            }
+
+            return recorder;
+        }
+    }
+
     /**
      * Convenience factory method to create a CloudWatchRecorder and register a JVM
      * shutdown hook to automatically shut it down on application exit.
@@ -117,11 +181,16 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      *
      * @param namespace CloudWatch namespace to publish under.
      * @return A CloudWatchRecorder instance that will automatically shutdown on JVM exit.
+     * @deprecated Use {@link CloudWatchRecorder.Builder} instead
      */
+    @Deprecated
     public static final CloudWatchRecorder withAutoShutdown(
             final String namespace)
     {
-        return withAutoShutdown(namespace, DEFAULT_DIMENSIONS);
+        return new Builder()
+                .autoShutdown(true)
+                .namespace(namespace)
+                .build();
     }
 
     /**
@@ -134,23 +203,18 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      * @param dimensionMapper Configuration specifying which attributes to sent
      *                        to CloudWatch for each metric event.
      * @return A CloudWatchRecorder instance that will automatically shutdown on JVM exit.
+     * @deprecated Use {@link CloudWatchRecorder.Builder} instead
      */
+    @Deprecated
     public static final CloudWatchRecorder withAutoShutdown(
             final String namespace,
             final DimensionMapper dimensionMapper)
     {
-        CloudWatchRecorder recorder = new CloudWatchRecorder(
-                AmazonCloudWatchClientBuilder.defaultClient(),
-                namespace,
-                DEFAULT_JITTER,
-                DEFAULT_PUBLISH_FREQ,
-                dimensionMapper);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            recorder.shutdown();
-        }));
-
-        return recorder;
+        return new Builder()
+                .autoShutdown(true)
+                .namespace(namespace)
+                .dimensionMapper(dimensionMapper)
+                .build();
     }
 
     /**
@@ -167,7 +231,9 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      *
      * @param client Client to use for connecting to CloudWatch
      * @param namespace CloudWatch namespace to publish under
+     * @deprecated Use {@link CloudWatchRecorder.Builder} instead
      */
+    @Deprecated
     public CloudWatchRecorder(
             final AmazonCloudWatch client,
             final String namespace)
@@ -195,13 +261,54 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      *                         Suggested value of 60, for one minute aggregation.
      * @param dimensionMapper Configuration specifying which attributes to sent
      *                        to CloudWatch for each metric event.
+     * @deprecated Use {@link CloudWatchRecorder.Builder} instead
      */
+    @Deprecated
     public CloudWatchRecorder(
             final AmazonCloudWatch client,
             final String namespace,
             final int maxJitter,
             final int publishFrequency,
-            final DimensionMapper dimensionMapper)
+            final DimensionMapper dimensionMapper) {
+        this(
+                client,
+                namespace,
+                maxJitter,
+                publishFrequency,
+                dimensionMapper,
+                Executors.newSingleThreadScheduledExecutor()
+        );
+    }
+
+    /**
+     * Create a new recorder instance.
+     * This recorder will periodically send aggregated metric events to CloudWatch
+     * via the provided client. Requests will be queued and sent using a
+     * single-threaded ScheduledExecutorService every publishFrequency (in seconds).
+     * The initial submission to CloudWatch will be delayed by a random amount
+     * on top of the publish frequency, bounded by maxJitter.
+     *
+     * The {@link #shutdown} method must be called when the application is done
+     * with the recorder in order to flush and stop the reporting thread.
+     *
+     * @param client Client to use for connecting to CloudWatch
+     * @param namespace CloudWatch namespace to publish under
+     * @param maxJitter Maximum delay before counting publish frequency for
+     *                  initial request, in seconds.
+     *                  A value of 0 will provide no jitter.
+     * @param publishFrequency Batch up and publish at this interval, in seconds.
+     *                         Suggested value of 60, for one minute aggregation.
+     * @param dimensionMapper Configuration specifying which dimensions to sent
+     *                        to CloudWatch for each metric event.
+     * @param scheduledExecutorService Executor to schedule metric publishing at a fixed rate.
+     */
+    private CloudWatchRecorder(
+            final AmazonCloudWatch client,
+            final String namespace,
+            final int maxJitter,
+            final int publishFrequency,
+            final DimensionMapper dimensionMapper,
+            final ScheduledExecutorService scheduledExecutorService)
     {
         if (client == null) {
             throw new IllegalArgumentException("AmazonCloudWatch must be provided");
@@ -215,10 +322,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
 
         this.metricsClient = client;
         this.namespace = namespace;
-
-        //TODO: is there value in injecting this? Yes, but then how to handle lifecycle?
-        this.publishExecutor = Executors.newSingleThreadScheduledExecutor();
-
+        this.publishExecutor = scheduledExecutorService;
         this.aggregator = new MetricDataAggregator(dimensionMapper);
 
         start(maxJitter, publishFrequency);
