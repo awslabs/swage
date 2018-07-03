@@ -97,7 +97,13 @@ public class CloudWatchRecorderTest {
 
         final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
 
-        final CloudWatchRecorder recorder = new CloudWatchRecorder(client, namespace, 60, 120, mapper);
+        final CloudWatchRecorder recorder = new CloudWatchRecorder.Builder()
+                .client(client)
+                .namespace(namespace)
+                .publishFrequency(120)
+                .maxJitter(60)
+                .dimensionMapper(mapper)
+                .build();
 
         final MetricContext context = recorder.context(data);
         context.record(M_TIME, time, Unit.MILLISECOND, Instant.now());
@@ -129,7 +135,13 @@ public class CloudWatchRecorderTest {
         CloudWatchRecorder recorder = null;
         try {
             // no jitter, publish soon
-            recorder = new CloudWatchRecorder(client, namespace, 0, 1, mapper);
+            recorder = new CloudWatchRecorder.Builder()
+                    .client(client)
+                    .namespace(namespace)
+                    .maxJitter(0)
+                    .publishFrequency(1)
+                    .dimensionMapper(mapper)
+                    .build();
 
             final TypedMap data = ContextData.withId(id).build();
             final MetricContext context = recorder.context(data);
@@ -197,7 +209,13 @@ public class CloudWatchRecorderTest {
         CloudWatchRecorder recorder = null;
         try {
             // no jitter, publish soon
-            recorder = new CloudWatchRecorder(client, namespace, 0, 1, mapper);
+            recorder = new CloudWatchRecorder.Builder()
+                    .client(client)
+                    .namespace(namespace)
+                    .maxJitter(0)
+                    .publishFrequency(1)
+                    .dimensionMapper(mapper)
+                    .build();
 
             final TypedMap data = ContextData.withId(id).build();
             final MetricContext context = recorder.context(data);
