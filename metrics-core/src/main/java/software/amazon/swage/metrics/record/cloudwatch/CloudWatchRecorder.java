@@ -405,10 +405,11 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
         // event lost. Rather than having one timestamp apply to all, we just
         // drop the time information and use the timestamp of aggregation.
 
-        aggregator.add(context,
-                       label,
-                       value.doubleValue(),
-                       unitMapping.get(unit));
+        aggregator.addRecording(context,
+                label,
+                value.doubleValue(),
+                unitMapping.get(unit),
+                time);
     }
 
     @Override
@@ -420,10 +421,10 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
             return;
         }
 
-        aggregator.add(context,
-                       label,
-                       Long.valueOf(delta).doubleValue(),
-                       StandardUnit.Count);
+        aggregator.addAggregated(context,
+                label,
+                (double) delta,
+                StandardUnit.Count);
     }
 
     //TODO: stop propagating new Unit abstractions everywhere

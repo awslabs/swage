@@ -31,8 +31,15 @@ import org.mockito.ArgumentMatcher;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -64,22 +71,18 @@ public class CloudWatchRecorderTest {
                 return false;
             }
 
-            List<MetricDatum> data = request.getMetricData();
-            if (data.size() != metricData.size()) {
-                return false;
-            }
+            // Check that multiset(metricData) == multiset(request.metricData).
 
-            List<MetricDatum> matches = new ArrayList<>(data.size());
-            for (MetricDatum actual : data) {
-                for (MetricDatum expected : this.metricData) {
-                    // Ignore timestamps and compare the rest of the datum
-                    if (actual.clone().withTimestamp(null).equals(expected.clone().withTimestamp(null))) {
-                        matches.add(expected);
-                    }
-                }
-            }
+            final Map<MetricDatum, Long> expected = multiset(metricData);
+            final Map<MetricDatum, Long> actual = multiset(request.getMetricData());
 
-            return (matches.size() == metricData.size());
+            return expected.equals(actual);
+        }
+
+        private static Map<MetricDatum, Long> multiset(final List<MetricDatum> data) {
+            return data.stream()
+                    .map(datum -> datum.clone().withTimestamp(null))
+                    .collect(Collectors.groupingBy(datum -> datum, Collectors.counting()));
         }
     }
 
@@ -112,8 +115,8 @@ public class CloudWatchRecorderTest {
         // shutdown right away, before first scheduled publish
         recorder.shutdown();
 
-        final List<MetricDatum> expected = new ArrayList<>(1);
-        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.Milliseconds));
+        final List<MetricDatum> expected = new ArrayList<>();
+        expected.add(makeRecordDatum(id, M_TIME.toString(), time, StandardUnit.Milliseconds));
 
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
@@ -159,10 +162,10 @@ public class CloudWatchRecorderTest {
             recorder.shutdown();
         }
 
-        final List<MetricDatum> expected = new ArrayList<>(2);
-        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.Milliseconds));
-        expected.add(makeDatum(id, M_PERC.toString(), load, load, load, 1, StandardUnit.Percent));
-        expected.add(makeDatum(id, M_FAIL.toString(), 1, 1, 1, 1, StandardUnit.Count));
+        final List<MetricDatum> expected = new ArrayList<>();
+        expected.add(makeRecordDatum(id, M_TIME.toString(), time, StandardUnit.Milliseconds));
+        expected.add(makeRecordDatum(id, M_PERC.toString(), load, StandardUnit.Percent));
+        expected.add(makeAggregateDatum(id, M_FAIL.toString(), 1.0));
 
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
@@ -176,33 +179,31 @@ public class CloudWatchRecorderTest {
         final String namespace = "testytesttest";
         final String id = UUID.randomUUID().toString();
 
-        final double[] timeVals = {867, 5309};
-        final double[] percVals = {0.01, 97.3, 3.1415};
-        final int[] failCnts = {1, 3, 0, 42};
+        final double[] timeVals = { 867.0, 5309.0 };
+        final double[] percVals = { 0.01, 97.3, 3.1415 };
+        final int[] failCnts = { 1, 3, 0, 42, 3, 0, 0 };
 
-        final List<MetricDatum> expected = new ArrayList<>(3);
-        expected.add(makeDatum(id,
-                               M_TIME.toString(),
-                               Arrays.stream(timeVals).sum(),
-                               Arrays.stream(timeVals).min().getAsDouble(),
-                               Arrays.stream(timeVals).max().getAsDouble(),
-                               timeVals.length,
-                               StandardUnit.Milliseconds));
-        expected.add(makeDatum(id,
-                               M_PERC.toString(),
-                               Arrays.stream(percVals).sum(),
-                               Arrays.stream(percVals).min().getAsDouble(),
-                               Arrays.stream(percVals).max().getAsDouble(),
-                               percVals.length,
-                               StandardUnit.Percent));
-        expected.add(makeDatum(id,
-                               M_FAIL.toString(),
-                               Arrays.stream(failCnts).sum(),
-                               Arrays.stream(failCnts).min().getAsInt(),
-                               Arrays.stream(failCnts).max().getAsInt(),
-                               failCnts.length,
-                               StandardUnit.Count));
-
+        final List<MetricDatum> expected = new ArrayList<>();
+        for (final double val : timeVals) {
+            expected.add(makeRecordDatum(
+                    id,
+                    M_TIME.toString(),
+                    val,
+                    StandardUnit.Milliseconds));
+        }
+        for (final double val : percVals) {
+            expected.add(makeRecordDatum(
+                    id,
+                    M_PERC.toString(),
+                    val,
+                    StandardUnit.Percent));
+        }
+        expected.add(makeAggregateDatum(id,
+                M_FAIL.toString(),
+                (double) Arrays.stream(failCnts).min().getAsInt(),
+                (double) Arrays.stream(failCnts).max().getAsInt(),
+                (double) Arrays.stream(failCnts).sum(),
+                failCnts.length));
 
         final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
 
@@ -229,10 +230,13 @@ public class CloudWatchRecorderTest {
             context.count(M_FAIL, failCnts[2]);
             context.record(M_PERC, percVals[2], Unit.PERCENT, Instant.now());
             context.count(M_FAIL, failCnts[3]);
+            context.count(M_FAIL, failCnts[4]);
+            context.count(M_FAIL, failCnts[5]);
+            context.count(M_FAIL, failCnts[6]);
             context.close();
 
             // allow time for one publish
-            Thread.sleep(1024);
+            Thread.sleep(1024L);
         } finally {
             recorder.shutdown();
         }
@@ -240,34 +244,50 @@ public class CloudWatchRecorderTest {
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
 
-    // Helper to create a MetricDatum instance
-    private MetricDatum makeDatum(
+    // Helper to create a MetricDatum instance for count().
+    private MetricDatum makeAggregateDatum(
             final String id,
             final String name,
-            final double sum,
-            final double min,
-            final double max,
-            final int count,
-            final StandardUnit unit)
-    {
-        MetricDatum md = new MetricDatum().withMetricName(name).withUnit(unit);
-
-        final StatisticSet statSet = new StatisticSet()
-                .withSampleCount(Double.valueOf(count))
-                .withSum(sum)
-                .withMinimum(min)
-                .withMaximum(max);
-        md.setStatisticValues(statSet);
-
-        List<Dimension> dimensions = new ArrayList<>(1);
-        Dimension trace = new Dimension().withName(ContextData.ID.name).withValue(id);
-
-        dimensions.add(trace);
-        md.setDimensions(dimensions);
-
-        return md;
+            final double singleValue) {
+        return makeAggregateDatum(id, name, singleValue, singleValue, singleValue, 1);
     }
 
+    private MetricDatum makeAggregateDatum(
+            final String id,
+            final String name,
+            final double min,
+            final double max,
+            final double sum,
+            final int count) {
+        final Dimension trace = new Dimension().withName(ContextData.ID.name).withValue(id);
 
+        final MetricDatum datum = new MetricDatum()
+                .withDimensions(Collections.singletonList(trace))
+                .withMetricName(name)
+                .withUnit(StandardUnit.Count);
+        if (count == 1) {
+            return datum.withValue((double) sum);
+        } else {
+            return datum.withStatisticValues(new StatisticSet()
+                    .withMinimum(min)
+                    .withMaximum(max)
+                    .withSum(sum)
+                    .withSampleCount((double) count));
+        }
+    }
 
+    // Helper to create a MetricDatum instance for record().
+    private MetricDatum makeRecordDatum(
+            final String id,
+            final String name,
+            final double value,
+            final StandardUnit unit) {
+        final Dimension trace = new Dimension().withName(ContextData.ID.name).withValue(id);
+
+        return new MetricDatum()
+                .withDimensions(Collections.singletonList(trace))
+                .withMetricName(name)
+                .withUnit(unit)
+                .withValue(value);
+    }
 }
