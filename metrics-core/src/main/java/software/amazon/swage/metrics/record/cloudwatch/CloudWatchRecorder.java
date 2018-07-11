@@ -111,11 +111,11 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
     public static final class Builder {
         private String namespace;
         private boolean autoShutdown = false;
-        private AmazonCloudWatch client = AmazonCloudWatchClientBuilder.defaultClient();
+        private AmazonCloudWatch client;
         private DimensionMapper dimensionMapper = DEFAULT_DIMENSIONS;
         private int maxJitter = DEFAULT_JITTER;
         private int publishFrequency = DEFAULT_PUBLISH_FREQ;
-        private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        private ScheduledExecutorService scheduledExecutorService;
 
         public Builder namespace(String namespace) {
             this.namespace = namespace;
@@ -153,6 +153,12 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
         }
 
         public CloudWatchRecorder build() {
+            if (scheduledExecutorService == null) {
+                scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+            }
+            if (client == null) {
+                client = AmazonCloudWatchClientBuilder.defaultClient();
+            }
             CloudWatchRecorder recorder = new CloudWatchRecorder(
                     client,
                     namespace,
