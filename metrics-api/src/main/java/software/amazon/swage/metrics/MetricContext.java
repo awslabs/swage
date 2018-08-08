@@ -13,7 +13,6 @@ import software.amazon.swage.collection.TypedMap;
  * <p/>
  * A {MetricContext} is the primary interface used to record measurements.
  */
-// TODO: provide a childContext() mechanism?
 public interface MetricContext extends AutoCloseable {
     /**
      * Returns the attributes and their values that identity the context in which measurements
@@ -71,6 +70,25 @@ public interface MetricContext extends AutoCloseable {
      */
     default void count(Metric label) {
         count(label, 1L);
+    }
+
+    /**
+     * Create a child context with the supplied attributes.
+     * The child context will inherited the attributes from this instance and
+     * use the supplied attributes as overrides.
+     *
+     * @param attributes the attribute overrides to apply.
+     * @return a new child context with combined attributes.
+     */
+    MetricContext newChildContext(TypedMap attributes);
+
+    /**
+     * Create a new child context with attributes attributes inherited from this instance.
+     *
+     * @return a new child context with attributes attributes inherited from this instance.
+     */
+    default MetricContext newChildContext(){
+       return newChildContext(TypedMap.empty());
     }
 
     /**

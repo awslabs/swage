@@ -2,6 +2,7 @@ package software.amazon.swage.metrics;
 
 import java.time.Instant;
 
+import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 
 /**
@@ -40,6 +41,13 @@ public class NullContext implements MetricContext {
 
     @Override
     public void count(Metric label, long delta) {
+    }
+
+    @Override
+    public MetricContext newChildContext(TypedMap attributes) {
+        ImmutableTypedMap.Builder childAttributes = ImmutableTypedMap.Builder.from(this.attributes);
+        attributes.stream().forEach(entry -> childAttributes.add(entry.getKey(), entry.getValue()));
+        return new NullContext(attributes);
     }
 
     @Override

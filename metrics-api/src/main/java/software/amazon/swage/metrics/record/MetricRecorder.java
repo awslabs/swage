@@ -119,28 +119,7 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
      * @return a context for recording metrics
      */
     public MetricContext context(TypedMap attributes) {
-        R context = newRecorderContext(attributes);
-        return new MetricContext() {
-            @Override
-            public TypedMap attributes() {
-                return context.attributes();
-            }
-
-            @Override
-            public void record(Metric label, Number value, Unit unit, Instant time) {
-                MetricRecorder.this.record(label, value, unit, time, context);
-            }
-
-            @Override
-            public void count(Metric label, long delta) {
-                MetricRecorder.this.count(label, delta, context);
-            }
-
-            @Override
-            public void close() {
-                MetricRecorder.this.close(context);
-            }
-        };
+        return new DefaultMetricContext(this, attributes);
     }
 
     /**
