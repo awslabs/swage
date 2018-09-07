@@ -30,7 +30,7 @@ import org.mockito.ArgumentMatcher;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -72,9 +72,16 @@ public class CloudWatchRecorderTest {
             List<MetricDatum> matches = new ArrayList<>(data.size());
             for (MetricDatum actual : data) {
                 for (MetricDatum expected : this.metricData) {
-                    // Ignore timestamps and compare the rest of the datum
-                    if (actual.clone().withTimestamp(null).equals(expected.clone().withTimestamp(null))) {
-                        matches.add(expected);
+                    if (actual.getMetricName().equals(M_FAIL.toString())) {
+                        // count metrics take the timestamp of when the metric is closed
+                        // Ignore timestamps and compare the rest of the datum
+                        if (actual.clone().withTimestamp(null).equals(expected.clone().withTimestamp(null))) {
+                            matches.add(expected);
+                        }
+                    } else {
+                        if (actual.equals(expected)) {
+                            matches.add(expected);
+                        }
                     }
                 }
             }
@@ -84,7 +91,7 @@ public class CloudWatchRecorderTest {
     }
 
     @Test
-    public void record_and_shutdown() throws Exception {
+    public void shutdown_before_publish() throws Exception {
         final DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
                 .build();
@@ -106,21 +113,33 @@ public class CloudWatchRecorderTest {
                 .build();
 
         final MetricContext context = recorder.context(data);
-        context.record(M_TIME, time, Unit.MILLISECOND, Instant.now());
+        Instant timestamp = Instant.now();
+        context.record(M_TIME, time, Unit.MILLISECOND, timestamp);
         context.close();
 
         // shutdown right away, before first scheduled publish
         recorder.shutdown();
 
         final List<MetricDatum> expected = new ArrayList<>(1);
-        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.Milliseconds));
+        expected.add(makeDatum(id, M_TIME, time, StandardUnit.Milliseconds, timestamp));
 
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
 
+    private MetricDatum makeDatum(String id, Metric metric, double value, StandardUnit unit, Instant timestamp) {
+        return new MetricDatum()
+                .withMetricName(metric.toString())
+                .withDimensions(new Dimension()
+                                .withName(ContextData.ID.name)
+                                .withValue(id)
+                ).withValue(value)
+                .withUnit(unit)
+                .withTimestamp(Date.from(timestamp));
+    }
+
 
     @Test
-    public void no_aggregation() throws Exception {
+    public void contextClosedBeforePublish() throws Exception {
         final DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
                 .build();
@@ -129,10 +148,12 @@ public class CloudWatchRecorderTest {
         final String id = UUID.randomUUID().toString();
         final Integer time = Integer.valueOf(23);
         final Integer load = Integer.valueOf(87);
+        final Integer load2 = Integer.valueOf(50);
 
         final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
 
         CloudWatchRecorder recorder = null;
+        final Instant timestamp = Instant.now();
         try {
             // no jitter, publish soon
             recorder = new CloudWatchRecorder.Builder()
@@ -146,11 +167,12 @@ public class CloudWatchRecorderTest {
             final TypedMap data = ContextData.withId(id).build();
             final MetricContext context = recorder.context(data);
 
-            final Instant timestamp = Instant.now();
 
             context.record(M_TIME, time, Unit.MILLISECOND, timestamp);
             context.count(M_FAIL, 1);
+            context.count(M_FAIL, 1);
             context.record(M_PERC, load, Unit.PERCENT, timestamp);
+            context.record(M_PERC, load2, Unit.PERCENT, timestamp);
             context.close();
 
             // allow time for one publish
@@ -159,54 +181,33 @@ public class CloudWatchRecorderTest {
             recorder.shutdown();
         }
 
-        final List<MetricDatum> expected = new ArrayList<>(2);
-        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.Milliseconds));
-        expected.add(makeDatum(id, M_PERC.toString(), load, load, load, 1, StandardUnit.Percent));
-        expected.add(makeDatum(id, M_FAIL.toString(), 1, 1, 1, 1, StandardUnit.Count));
+        final List<MetricDatum> expected = new ArrayList<>(4);
+        expected.add(makeDatum(id, M_TIME, time, StandardUnit.Milliseconds, timestamp));
+        expected.add(makeDatum(id, M_FAIL, 2, StandardUnit.Count, timestamp));
+        expected.add(makeDatum(id, M_PERC, load, StandardUnit.Percent, timestamp));
+        expected.add(makeDatum(id, M_PERC, load2, StandardUnit.Percent, timestamp));
 
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
 
     @Test
-    public void aggregation() throws Exception {
+    // TODO: Currently, if a context is not closed before shutdown, no counts will be emitted.
+    //  Have the recorder keep track of open contexts and close them on shutdown?
+    public void contextNotClosedBeforePublish() throws Exception {
         final DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
                 .build();
 
         final String namespace = "testytesttest";
         final String id = UUID.randomUUID().toString();
-
-        final double[] timeVals = {867, 5309};
-        final double[] percVals = {0.01, 97.3, 3.1415};
-        final int[] failCnts = {1, 3, 0, 42};
-
-        final List<MetricDatum> expected = new ArrayList<>(3);
-        expected.add(makeDatum(id,
-                               M_TIME.toString(),
-                               Arrays.stream(timeVals).sum(),
-                               Arrays.stream(timeVals).min().getAsDouble(),
-                               Arrays.stream(timeVals).max().getAsDouble(),
-                               timeVals.length,
-                               StandardUnit.Milliseconds));
-        expected.add(makeDatum(id,
-                               M_PERC.toString(),
-                               Arrays.stream(percVals).sum(),
-                               Arrays.stream(percVals).min().getAsDouble(),
-                               Arrays.stream(percVals).max().getAsDouble(),
-                               percVals.length,
-                               StandardUnit.Percent));
-        expected.add(makeDatum(id,
-                               M_FAIL.toString(),
-                               Arrays.stream(failCnts).sum(),
-                               Arrays.stream(failCnts).min().getAsInt(),
-                               Arrays.stream(failCnts).max().getAsInt(),
-                               failCnts.length,
-                               StandardUnit.Count));
-
+        final Integer time = Integer.valueOf(23);
+        final Integer load = Integer.valueOf(87);
+        final Integer load2 = Integer.valueOf(50);
 
         final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
 
         CloudWatchRecorder recorder = null;
+        final Instant timestamp = Instant.now();
         try {
             // no jitter, publish soon
             recorder = new CloudWatchRecorder.Builder()
@@ -220,16 +221,12 @@ public class CloudWatchRecorderTest {
             final TypedMap data = ContextData.withId(id).build();
             final MetricContext context = recorder.context(data);
 
-            context.count(M_FAIL, failCnts[0]);
-            context.record(M_PERC, percVals[0], Unit.PERCENT, Instant.now());
-            context.record(M_TIME, timeVals[0], Unit.MILLISECOND, Instant.now());
-            context.count(M_FAIL, failCnts[1]);
-            context.record(M_PERC, percVals[1], Unit.PERCENT, Instant.now());
-            context.record(M_TIME, timeVals[1], Unit.MILLISECOND, Instant.now());
-            context.count(M_FAIL, failCnts[2]);
-            context.record(M_PERC, percVals[2], Unit.PERCENT, Instant.now());
-            context.count(M_FAIL, failCnts[3]);
-            context.close();
+
+            context.record(M_TIME, time, Unit.MILLISECOND, timestamp);
+            context.count(M_FAIL, 1);
+            context.count(M_FAIL, 1);
+            context.record(M_PERC, load, Unit.PERCENT, timestamp);
+            context.record(M_PERC, load2, Unit.PERCENT, timestamp);
 
             // allow time for one publish
             Thread.sleep(1024);
@@ -237,7 +234,71 @@ public class CloudWatchRecorderTest {
             recorder.shutdown();
         }
 
+        final List<MetricDatum> expected = new ArrayList<>(3);
+        expected.add(makeDatum(id, M_TIME, time, StandardUnit.Milliseconds, timestamp));
+        expected.add(makeDatum(id, M_PERC, load, StandardUnit.Percent, timestamp));
+        expected.add(makeDatum(id, M_PERC, load2, StandardUnit.Percent, timestamp));
+
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
+    }
+
+    @Test
+    public void contextClosedAfterPublish() throws Exception {
+         final DimensionMapper mapper = new DimensionMapper.Builder()
+                .addGlobalDimension(ContextData.ID)
+                .build();
+
+        final String namespace = "testytesttest";
+        final String id = UUID.randomUUID().toString();
+        final Integer time = Integer.valueOf(23);
+        final Integer load = Integer.valueOf(87);
+        final Integer load2 = Integer.valueOf(50);
+
+        final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
+
+        CloudWatchRecorder recorder = null;
+        final Instant timestamp = Instant.now();
+        try {
+            // no jitter, publish soon
+            recorder = new CloudWatchRecorder.Builder()
+                    .client(client)
+                    .namespace(namespace)
+                    .maxJitter(0)
+                    .publishFrequency(1)
+                    .dimensionMapper(mapper)
+                    .build();
+
+            final TypedMap data = ContextData.withId(id).build();
+            final MetricContext context = recorder.context(data);
+
+
+            context.record(M_TIME, time, Unit.MILLISECOND, timestamp);
+            context.count(M_FAIL, 1);
+            context.count(M_FAIL, 1);
+            context.record(M_PERC, load, Unit.PERCENT, timestamp);
+            context.record(M_PERC, load2, Unit.PERCENT, timestamp);
+
+            // allow time for one publish
+            Thread.sleep(1024);
+
+            context.close();
+
+            // allow time for the next publish
+            Thread.sleep(1024);
+        } finally {
+            recorder.shutdown();
+        }
+
+        final List<MetricDatum> expected1 = new ArrayList<>(3);
+        expected1.add(makeDatum(id, M_TIME, time, StandardUnit.Milliseconds, timestamp));
+        expected1.add(makeDatum(id, M_PERC, load, StandardUnit.Percent, timestamp));
+        expected1.add(makeDatum(id, M_PERC, load2, StandardUnit.Percent, timestamp));
+
+        final List<MetricDatum> expected2 = new ArrayList<>(1);
+        expected2.add(makeDatum(id, M_FAIL, 2, StandardUnit.Count, timestamp));
+
+        verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected1)));
+        verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected2)));
     }
 
     // Helper to create a MetricDatum instance

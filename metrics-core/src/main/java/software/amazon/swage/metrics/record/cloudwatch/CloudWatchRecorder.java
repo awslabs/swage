@@ -14,23 +14,15 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
+import com.amazonaws.services.cloudwatch.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.swage.collection.TypedMap;
@@ -79,7 +71,9 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
 
     private static final Logger log = LogManager.getLogger(CloudWatchRecorder.class);
 
-    // Count of metric datum to batch together in one CloudWatch call
+    // Count of metric data to batch together in one CloudWatch call
+    // Current limit of 20 derived from:
+    // http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
     private static final int BATCH_SIZE = 20;
 
     // How long to wait for graceful shutdown before axing the publish thread
@@ -106,7 +100,8 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
     private final ScheduledExecutorService publishExecutor;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
-    private final MetricDataAggregator aggregator;
+    private final DimensionMapper dimensionMapper;
+    private final BlockingQueue<MetricDatum> metricData;
 
     public static final class Builder {
         private String namespace;
@@ -321,7 +316,8 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
         this.metricsClient = client;
         this.namespace = namespace;
         this.publishExecutor = scheduledExecutorService;
-        this.aggregator = new MetricDataAggregator(dimensionMapper);
+        this.dimensionMapper = dimensionMapper;
+        this.metricData = new LinkedBlockingQueue<>(); // TODO: allow a limit to be specified here?
 
         start(maxJitter, publishFrequency);
     }
@@ -394,14 +390,13 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
             return;
         }
 
-        // Metric events will be aggregated, with the individual time of each
-        // event lost. Rather than having one timestamp apply to all, we just
-        // drop the time information and use the timestamp of aggregation.
-
-        aggregator.add(context.attributes(),
-                       label,
-                       value.doubleValue(),
-                       unitMapping.get(unit));
+        metricData.offer(new MetricDatum()
+                .withMetricName(label.toString())
+                .withValue(value.doubleValue())
+                .withUnit(unitMapping.get(unit))
+                .withDimensions(dimensionMapper.getDimensions(label, context.attributes())) //TODO: avoid doing this every time for a context - caching, or?
+                .withTimestamp(Date.from(time))
+        );
     }
 
     @Override
@@ -413,10 +408,13 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
             return;
         }
 
-        aggregator.add(context.attributes(),
-                       label,
-                       Long.valueOf(delta).doubleValue(),
-                       StandardUnit.Count);
+        metricData.offer(new MetricDatum()
+                .withMetricName(label.toString())
+                .withValue(Long.valueOf(delta).doubleValue())
+                .withUnit(StandardUnit.Count)
+                .withDimensions(dimensionMapper.getDimensions(label, context.attributes())) //TODO: avoid doing this every time for a context - caching, or?
+                .withTimestamp(Date.from(Instant.now()))
+        );
     }
 
     //TODO: stop propagating new Unit abstractions everywhere
@@ -454,19 +452,21 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
 
         // Grab all the current aggregated attributes, resetting
         // the aggregator to empty in the process
-        List<MetricDatum> metricData = aggregator.flush();
-        if(metricData.isEmpty()) {
+        List<MetricDatum> metrics = new ArrayList<>();
+        metricData.drainTo(metrics);
+        if(metrics.isEmpty()) {
             return;
         }
 
         // Send the attributes in batches to adhere to CloudWatch limitation on the
         // number of MetricDatum objects per request, see:
         // http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
+        // TODO: ensure calls do not exceed 150 tps (see ^)
         int begin = 0;
-        while(begin < metricData.size()) {
+        while (begin < metrics.size()) {
             int end = begin + BATCH_SIZE;
 
-            sendData(metricData.subList(begin, Math.min(end, metricData.size())));
+            sendData(metrics.subList(begin, Math.min(end, metrics.size())));
 
             begin = end;
         }
