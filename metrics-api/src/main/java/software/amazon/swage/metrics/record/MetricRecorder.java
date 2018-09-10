@@ -15,6 +15,8 @@
 package software.amazon.swage.metrics.record;
 
 import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
@@ -121,6 +123,8 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
     public MetricContext context(TypedMap attributes) {
         R context = newRecorderContext(attributes);
         return new MetricContext() {
+            private Map<Metric,Long> counts = new ConcurrentHashMap<>();
+
             @Override
             public TypedMap attributes() {
                 return context.attributes();
@@ -133,11 +137,12 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
 
             @Override
             public void count(Metric label, long delta) {
-                MetricRecorder.this.count(label, delta, context);
+                counts.compute(label, (x, previous) -> (previous == null) ? delta : previous + delta);
             }
 
             @Override
             public void close() {
+                counts.forEach((key, value) -> MetricRecorder.this.count(key, value, context));
                 MetricRecorder.this.close(context);
             }
         };
@@ -172,7 +177,7 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
             R context);
 
     /**
-     * Count the increase or decrease of a metric in the given context.
+     * Record the value of a count metric at the closure of a context.
      *
      * These are explicitly aggregated values, where only the total number of
      * occurrences in a context matter.
@@ -180,21 +185,20 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
      * track of the number of errors encountered, or the amount of attributes sent
      * while in the given context.
      *
+     * Changes to the count are timestamped with the time of context closure,
+     * as only the total value of all counts for a metric have any meaning
      * If you need to distinguish between occurrences of an event, or care that
      * an event did not occur (for ratios of success for example) then you want
      * to record those individually and not use a count.
-     * Changes to the count are not timestamped as only the total value of all
-     * counts for a metric have any meaning - if the individual change needs to
-     * be tracked, you probably want to record the change as a gauged event.
      *
      * This method will fail silently, as application code is not expected
      * to depend on success or failure.
      *
      * @param label the metric to capture
-     * @param delta the increase (or decrease) in the value
+     * @param value the total value of the count at the end of the context
      * @param context the context the value belongs in.
      */
-    protected abstract void count(Metric label, long delta, R context);
+    protected abstract void count(Metric label, long value, R context);
 
 
     /**
