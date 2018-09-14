@@ -44,7 +44,9 @@ public class MemoryPoolSensor implements Sensor {
 
     private void reportUsage(MemoryPoolMXBean mxBean, MetricContext metricContext)
     {
-        String name = mxBean.getName();
+        // Metric names cannot contain spaces. Pool names are *all* of the form 'Alpha Beta', e.g.
+        // 'Code Cache'.
+        String name = mxBean.getName().replace(" ", "");
         Metric usedMetric = Metric.define("MemoryPoolUsed_" + name);
         Metric maxMetric = Metric.define("MemoryPoolMax_" + name);
         Metric percMetric = Metric.define("MemoryPoolUsage_" + name);
