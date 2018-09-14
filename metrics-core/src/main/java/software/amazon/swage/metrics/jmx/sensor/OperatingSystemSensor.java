@@ -88,8 +88,8 @@ public class OperatingSystemSensor implements Sensor {
             metricContext.record(FILE_DESCRIPTORS_OPEN, open, Unit.NONE);
 
             if (open >= 0) {
-                double use_percent = 100.0 * ((double) open / (double) max);
-                metricContext.record(FILE_DESCRIPTORS_USED, use_percent, Unit.PERCENT);
+                double usePercent = 100.0 * ((double)open / (double)max);
+                metricContext.record(FILE_DESCRIPTORS_USED, usePercent, Unit.PERCENT);
             }
         }
         catch (MBeanException|AttributeNotFoundException|InstanceNotFoundException|ReflectionException|IOException e)

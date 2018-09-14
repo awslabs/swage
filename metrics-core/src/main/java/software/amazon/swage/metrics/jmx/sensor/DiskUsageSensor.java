@@ -30,7 +30,7 @@ import java.nio.file.Paths;
  */
 public class DiskUsageSensor implements Sensor {
 
-    private static final long K = 1024;
+    private static final long G = 1024L * 1024L * 1024L;
 
     public static final TypedMap.Key<Long> DISK_SIZE = TypedMap.key("DiskSize", Long.class);
     public static final Metric DISK_USED = Metric.define("DiskUse");
@@ -43,8 +43,10 @@ public class DiskUsageSensor implements Sensor {
             FileStore fileStore = Files.getFileStore(Paths.get(System.getProperty("user.dir")));
 
             long size = fileStore.getTotalSpace();
-            long gb_size = size/(K*K*K);
-            return ImmutableTypedMap.Builder.from(existing).add(DISK_SIZE, Long.valueOf(gb_size)).build();
+            return ImmutableTypedMap.Builder
+                    .from(existing)
+                    .add(DISK_SIZE, Long.valueOf(size / G))
+                    .build();
         } catch (IOException e) {
             // log?
             return existing;
@@ -60,8 +62,8 @@ public class DiskUsageSensor implements Sensor {
 
             long total = fileStore.getTotalSpace();
             long free = fileStore.getUsableSpace();
-            double percent_free = 100.0 * ((double)(total-free)/(double)total);
-            metricContext.record(DISK_USED, percent_free, Unit.PERCENT);
+            double percentFree = 100.0 * ((double)(total - free) / (double)total);
+            metricContext.record(DISK_USED, percentFree, Unit.PERCENT);
         } catch (IOException e) {
             throw new SenseException("Problem reading disk space", e);
         }
