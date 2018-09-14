@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class MemoryPoolSensor implements Sensor {
 
-    private static final long M = 1024 * 1024;
+    private static final double M = 1024.0 * 1024.0;
 
     @Override
     public void sense(final MetricContext metricContext)
@@ -53,14 +53,14 @@ public class MemoryPoolSensor implements Sensor {
         long used = usage.getUsed();
         long max = usage.getMax();
 
-        metricContext.record(usedMetric, used / M, Unit.MEGABYTE);
+        metricContext.record(usedMetric, (double)used / M, Unit.MEGABYTE);
 
         // max can be undefined (-1) https://docs.oracle.com/javase/8/docs/api/java/lang/management/MemoryUsage.html
         if (max >= 0) {
-            metricContext.record(maxMetric, max / M, Unit.MEGABYTE);
+            metricContext.record(maxMetric, (double)max / M, Unit.MEGABYTE);
 
-            double used_percent = 100.0 * ((double)used/(double)max);
-            metricContext.record(percMetric, used_percent, Unit.PERCENT);
+            double usedPercent = 100.0 * ((double)used / (double)max);
+            metricContext.record(percMetric, usedPercent, Unit.PERCENT);
         }
 
     }

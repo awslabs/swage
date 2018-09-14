@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class BufferPoolSensor implements Sensor {
 
-    private static final long M = 1024*1024;
+    private static final double M = 1024.0 * 1024.0;
 
     @Override
     public void sense(final MetricContext metricContext)
@@ -44,8 +44,8 @@ public class BufferPoolSensor implements Sensor {
             Metric maxMetric = Metric.define("BufferPoolMax_"+name);
 
             metricContext.record(countMetric, mxBean.getCount(), Unit.NONE);
-            metricContext.record(usedMetric, mxBean.getMemoryUsed() / M, Unit.MEGABYTE);
-            metricContext.record(maxMetric,  mxBean.getTotalCapacity() / M, Unit.MEGABYTE);
+            metricContext.record(usedMetric, (double)mxBean.getMemoryUsed() / M, Unit.MEGABYTE);
+            metricContext.record(maxMetric, (double)mxBean.getTotalCapacity() / M, Unit.MEGABYTE);
         }
 
     }

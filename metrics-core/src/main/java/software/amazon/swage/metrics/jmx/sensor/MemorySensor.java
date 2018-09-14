@@ -29,7 +29,7 @@ import java.lang.management.MemoryUsage;
  */
 public class MemorySensor implements Sensor {
 
-    private static final long M = 1024*1024;
+    private static final double M = 1024.0 * 1024.0;
 
     public static final Metric HEAP = Metric.define("HeapMemory");
     public static final Metric NON_HEAP = Metric.define("NonHeapMemory");
@@ -51,14 +51,14 @@ public class MemorySensor implements Sensor {
         MemoryUsage usage = memoryMxBean.getHeapMemoryUsage();
 
         long used = usage.getUsed();
-        metricContext.record(HEAP, used / M, Unit.MEGABYTE);
+        metricContext.record(HEAP, (double)used / M, Unit.MEGABYTE);
 
         long max = usage.getMax();
         if (max >= 0) {
-            metricContext.record(HEAP_MAX, max / M, Unit.MEGABYTE);
+            metricContext.record(HEAP_MAX, (double)max / M, Unit.MEGABYTE);
 
-            double used_percent = 100.0 * ((double)used/(double)max);
-            metricContext.record(HEAP_USED, used_percent, Unit.PERCENT);
+            double usedPercent = 100.0 * ((double)used / (double)max);
+            metricContext.record(HEAP_USED, usedPercent, Unit.PERCENT);
         }
     }
 
@@ -66,14 +66,14 @@ public class MemorySensor implements Sensor {
         MemoryUsage usage = memoryMxBean.getNonHeapMemoryUsage();
 
         long used = usage.getUsed();
-        metricContext.record(NON_HEAP, used / M, Unit.MEGABYTE);
+        metricContext.record(NON_HEAP, (double)used / M, Unit.MEGABYTE);
 
         long max = usage.getMax();
         if (max >= 0) {
-            metricContext.record(NON_HEAP_MAX, max / M, Unit.MEGABYTE);
+            metricContext.record(NON_HEAP_MAX, (double)max / M, Unit.MEGABYTE);
 
-            double used_percent = 100.0 * ((double)used/(double)max);
-            metricContext.record(NON_HEAP_USED, used_percent, Unit.PERCENT);
+            double usedPercent = 100.0 * ((double)used / (double)max);
+            metricContext.record(NON_HEAP_USED, usedPercent, Unit.PERCENT);
         }
     }
 
