@@ -141,6 +141,11 @@ public class FileRecorder extends MetricRecorder<MetricRecorder.RecorderContext>
             return;
         }
 
+        if (!isValid(label)) {
+            log.warn("Invalid metric name: '" + label + "'");
+            return;
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append("metric=")
           .append(label.toString());
@@ -188,4 +193,12 @@ public class FileRecorder extends MetricRecorder<MetricRecorder.RecorderContext>
         );
     }
 
+    static boolean isValid(final Metric label) {
+        // Any value that makes it difficult/impossible to parse makes a label invalid.
+        final String str = label.toString();
+        return !(str.contains("\n")
+                || str.contains(",")
+                || str.contains(":")
+                || str.contains("="));
+    }
 }
