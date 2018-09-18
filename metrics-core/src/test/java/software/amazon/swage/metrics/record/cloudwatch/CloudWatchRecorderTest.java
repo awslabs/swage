@@ -197,10 +197,10 @@ public class CloudWatchRecorderTest {
                                StandardUnit.Percent));
         expected.add(makeDatum(id,
                                M_FAIL.toString(),
-                               Arrays.stream(failCnts).sum(),
-                               Arrays.stream(failCnts).min().getAsInt(),
-                               Arrays.stream(failCnts).max().getAsInt(),
-                               failCnts.length,
+                               46,
+                               46,
+                               46,
+                               1,
                                StandardUnit.Count));
 
 

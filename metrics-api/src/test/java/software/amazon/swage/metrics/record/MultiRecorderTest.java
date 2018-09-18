@@ -7,8 +7,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -43,9 +46,18 @@ public class MultiRecorderTest {
     }
 
     @Test
-    public void countIsSentToAllDelegates() {
+    public void countIsNotSentToDelegatesBeforeClose() {
         MetricContext context = recorder.context(attributes);
         context.count(METRIC, 42L);
+        verify(delegate1, times(0)).count(any(Metric.class), anyLong(), any(MetricRecorder.RecorderContext.class));
+        verify(delegate2, times(0)).count(any(Metric.class), anyLong(), any(MetricRecorder.RecorderContext.class));
+    }
+
+    @Test
+    public void countIsSentToAllDelegatesOnClose() {
+        MetricContext context = recorder.context(attributes);
+        context.count(METRIC, 42L);
+        context.close();
         verify(delegate1).count(eq(METRIC), eq(42L), argThat(t -> attributes == t.attributes()));
         verify(delegate2).count(eq(METRIC), eq(42L), argThat(t -> attributes == t.attributes()));
     }
