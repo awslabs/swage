@@ -16,12 +16,16 @@ package software.amazon.swage.metrics.record;
 
 import java.time.Instant;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertSame;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import software.amazon.swage.collection.TypedMap;
@@ -31,31 +35,55 @@ import software.amazon.swage.metrics.Unit;
 
 public class MetricRecorderTest {
     private static final Metric METRIC = Metric.define("Metric");
+    private TypedMap attributes = TypedMap.empty();
+    private MetricRecorder.RecorderContext recorderContext = new MetricRecorder.RecorderContext(attributes);
+    private MetricRecorder<MetricRecorder.RecorderContext> recorder = spy(new NullRecorder());
+
+    @Before
+    public void setup() {
+        when(recorder.newRecorderContext(attributes)).thenReturn(recorderContext);
+    }
 
     @Test
     public void recorderContextReturnsSuppliedAttributes() {
-        TypedMap attributes = TypedMap.empty();
         MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(attributes);
         assertSame(attributes, context.attributes());
     }
 
     @Test
-    public void recorderDelegatesToImplementation() throws Exception {
-        TypedMap attributes = TypedMap.empty();
-        MetricRecorder.RecorderContext recorderContext = new MetricRecorder.RecorderContext(attributes);
-
-        MetricRecorder<MetricRecorder.RecorderContext> recorder = spy(new NullRecorder());
-        when(recorder.newRecorderContext(attributes)).thenReturn(recorderContext);
-
+    public void recorderDelegatesRecordToImplementation() throws Exception {
         MetricContext context = recorder.context(attributes);
-
         Instant timestamp = Instant.now();
         context.record(METRIC, 42L, Unit.NONE, timestamp);
+        verify(recorder).record(eq(METRIC), eq(42L), eq(Unit.NONE), eq(timestamp), same(recorderContext));
+    }
+
+    @Test
+    public void recorderDoesNotDelegateCountToImplementationBeforeClose() throws Exception {
+        MetricContext context = recorder.context(attributes);
+        context.count(METRIC, 4L);
+        context.count(METRIC, -2L);
+        context.count(METRIC, 40L);
+        verify(recorder, times(0)).count(any(Metric.class), anyLong(), any(MetricRecorder.RecorderContext.class));
+    }
+
+    @Test
+    public void recorderDelegatesCountToImplementationOnClose() throws Exception {
+        MetricContext context = recorder.context(attributes);
         context.count(METRIC, 4L);
         context.close();
-
-        verify(recorder).record(eq(METRIC), eq(42L), eq(Unit.NONE), eq(timestamp), same(recorderContext));
         verify(recorder).count(eq(METRIC), eq(4L), same(recorderContext));
+        verify(recorder).close(same(recorderContext));
+    }
+
+    @Test
+    public void recorderAggregatesCountsAndDelegatesOnce() throws Exception {
+        MetricContext context = recorder.context(attributes);
+        context.count(METRIC, 4L);
+        context.count(METRIC, -2L);
+        context.count(METRIC, 40L);
+        context.close();
+        verify(recorder, times(1)).count(eq(METRIC), eq(42L), same(recorderContext));
         verify(recorder).close(same(recorderContext));
     }
 }

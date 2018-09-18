@@ -53,9 +53,10 @@ public interface MetricContext extends AutoCloseable {
      * is often used to record occurrences of an event, such as the number of times
      * a method is called, an error occurred, or the amount of data sent.
      * <p/>
-     * Changes to the count are not timestamped as only the total value of all
-     * counts for a metric have any meaning. If the individual change needs to
-     * be tracked, it should be recorded as a gauged event.
+     * Changes to the count are timestamped with the time of context closure,
+     * since only the total value of all counts for a metric at the end of a context
+     * have any meaning. If the individual change needs to be tracked, it should be
+     * recorded as a gauged event.
      *
      * @param label the metric being recorded
      * @param delta the change in the value
