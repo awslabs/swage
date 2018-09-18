@@ -3,6 +3,7 @@ package software.amazon.swage.metrics;
 import java.time.Instant;
 
 import software.amazon.swage.collection.TypedMap;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
 /**
  * A MetricContext implementation that acts as a sink for recorded events.
@@ -21,12 +22,18 @@ public class NullContext implements MetricContext {
     }
 
     private final TypedMap attributes;
+    private final MetricContext parent;
 
     /**
      * @param attributes the attributes of the measurement context
      */
     public NullContext(TypedMap attributes) {
+        this(attributes, null);
+    }
+
+    NullContext(TypedMap attributes, MetricContext parent) {
         this.attributes = attributes;
+        this.parent = parent;
     }
 
     @Override
@@ -44,5 +51,15 @@ public class NullContext implements MetricContext {
 
     @Override
     public void close() {
+    }
+
+    @Override
+    public MetricContext newChild(TypedMap attributes) {
+        return new NullContext(attributes, this);
+    }
+
+    @Override
+    public MetricContext parent() {
+        return parent;
     }
 }

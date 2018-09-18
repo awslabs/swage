@@ -90,6 +90,7 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
      */
     public static class RecorderContext {
         private final TypedMap attributes;
+        private final RecorderContext parent;
 
         /**
          * Constructor mandating the values needed for the emitter-specific public interface.
@@ -97,7 +98,19 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
          * @param attributes the user-supplied attributes of the measurement context
          */
         public RecorderContext(TypedMap attributes) {
+            this(attributes, null);
+        }
+
+         /**
+         *  Constructor for creating a RecorderContext from a parent.
+         *
+         * @param attributes the user-supplied attributes of the measurement context which differentate it 
+         *        from the parent.
+         * @param parent the recorder context parent.
+         */
+        protected RecorderContext(TypedMap attributes, RecorderContext parent) {
             this.attributes = attributes;
+            this.parent = parent;
         }
 
         /**
@@ -105,6 +118,25 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
          */
         public TypedMap attributes() {
             return attributes;
+        }
+
+        /**
+         * Create a child  of this instance that is differentiated from this instance
+         * by the supplied attributes.
+         *
+         * @param attributes The attributes which define the child context in relation to this instance
+         * @return a new child of this instance.
+         */
+        public RecorderContext newChild(TypedMap attributes){
+            return new RecorderContext(attributes, this);
+        }
+
+        /**
+         * Return the RecorderContext which this instance was created from.
+         * @return the parent of this instance. Null if this instance has no parent.
+         */
+        public RecorderContext parent() {
+            return parent;
         }
     }
 
@@ -119,28 +151,7 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
      * @return a context for recording metrics
      */
     public MetricContext context(TypedMap attributes) {
-        R context = newRecorderContext(attributes);
-        return new MetricContext() {
-            @Override
-            public TypedMap attributes() {
-                return context.attributes();
-            }
-
-            @Override
-            public void record(Metric label, Number value, Unit unit, Instant time) {
-                MetricRecorder.this.record(label, value, unit, time, context);
-            }
-
-            @Override
-            public void count(Metric label, long delta) {
-                MetricRecorder.this.count(label, delta, context);
-            }
-
-            @Override
-            public void close() {
-                MetricRecorder.this.close(context);
-            }
-        };
+        return new DefaultMetricContext(this, attributes);
     }
 
     /**
@@ -220,5 +231,51 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
      * @param context The context being closed.
      */
     protected void close(R context) {
+    }
+
+    private final class DefaultMetricContext implements MetricContext {
+        private final MetricRecorder recorder;
+        private final RecorderContext context;
+        private final MetricContext parent;
+
+        public DefaultMetricContext(MetricRecorder recorder, TypedMap attributes) {
+            this(recorder, recorder.newRecorderContext(attributes), null);
+        }
+
+        DefaultMetricContext(MetricRecorder recorder, RecorderContext context, MetricContext parent) {
+            this.recorder = recorder;
+            this.context = context;
+            this.parent = parent;
+        }
+
+        @Override
+        public TypedMap attributes() {
+            return context.attributes();
+        }
+
+        @Override
+        public void record(Metric label, Number value, Unit unit, Instant time) {
+            recorder.record(label, value, unit, time, context);
+        }
+
+        @Override
+        public void count(Metric label, long delta) {
+            recorder.count(label, delta, context);
+        }
+
+        @Override
+        public void close() {
+            recorder.close(context);
+        }
+
+        @Override
+        public MetricContext newChild(TypedMap attributes) {
+            return new DefaultMetricContext(recorder, context.newChild(attributes), this);
+        }
+
+        @Override
+        public MetricContext parent() {
+            return parent;
+        }
     }
 }

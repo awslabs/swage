@@ -14,13 +14,13 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import software.amazon.swage.collection.TypedMap;
-import software.amazon.swage.metrics.ContextData;
-import software.amazon.swage.metrics.Metric;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import org.junit.Test;
+import software.amazon.swage.metrics.ContextData;
+import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,8 +29,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-/**
- */
 public class MetricDataAggregatorTest {
 
     private static final Metric A = Metric.define("A");
@@ -48,7 +46,7 @@ public class MetricDataAggregatorTest {
         final double value = 3.14;
         final StandardUnit unit = StandardUnit.Terabits;
 
-        final TypedMap context = ContextData.withId(UUID.randomUUID().toString()).build();
+        final MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(UUID.randomUUID().toString()).build());
 
         MetricDataAggregator aggregator = new MetricDataAggregator(mapper);
         aggregator.add(context, name, value, unit);
@@ -79,7 +77,7 @@ public class MetricDataAggregatorTest {
         final double[] values = {3.14, 6.28, 0, 9};
         final StandardUnit[] units = {StandardUnit.Seconds, StandardUnit.Terabits, StandardUnit.Seconds, StandardUnit.Milliseconds};
 
-        final TypedMap context = ContextData.withId(UUID.randomUUID().toString()).build();
+        final MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(UUID.randomUUID().toString()).build());
 
         MetricDataAggregator aggregator = new MetricDataAggregator(mapper);
         for (int i=0; i<names.length; i++) {
@@ -126,7 +124,7 @@ public class MetricDataAggregatorTest {
                 StandardUnit.Percent,
                 StandardUnit.Milliseconds};
 
-        final TypedMap context = ContextData.withId(UUID.randomUUID().toString()).build();
+        final MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(UUID.randomUUID().toString()).build());
 
         MetricDataAggregator aggregator = new MetricDataAggregator(mapper);
         for (int i=0; i<names.length; i++) {

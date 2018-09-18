@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not
@@ -14,18 +14,23 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
+import com.amazonaws.services.cloudwatch.model.Dimension;
+import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
-import com.amazonaws.services.cloudwatch.model.Dimension;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Logic for mapping a metric event and associated context to a set of
@@ -126,33 +131,56 @@ public class DimensionMapper {
      * the dimension will be added with a value of "null".
      *
      * @param metric Metric being sent
-     * @param context TypedMap containing metric context attributes
+     * @param context the context in which the metric was recorded.
      * @return A list of Dimensions appropriate to send to CloudWatch
      */
-    public List<Dimension> getDimensions(final Metric metric, final TypedMap context)
+    public List<Dimension> getDimensions(final Metric metric, final MetricRecorder.RecorderContext context)
     {
+        //Flattening the context hierarchy here allows this dimension mapper to work with multiple cloudwatch
+        //recorders. If a recorder wants to precompute the flattened hierarchy it can do so in its implementation
+        //of RecorderContext.
+        TypedMap attributes = flattenContextHierarchy(context);
         Set<TypedMap.Key> dimensionKeys = filterMap.get(metric);
         if (dimensionKeys == null) {
             dimensionKeys = Collections.emptySet();
         }
 
-        Set<Dimension> dimensions = new HashSet<>(globalDimensions.size() + dimensionKeys.size());
-
-        for (TypedMap.Key k : globalDimensions) {
-            Dimension d = new Dimension();
-            d.setName(k.name);
-            d.setValue(String.valueOf(context.get(k)));
-            dimensions.add(d);
-        }
-
-        for (TypedMap.Key k : dimensionKeys) {
-            Dimension d = new Dimension();
-            d.setName(k.name);
-            d.setValue(String.valueOf(context.get(k)));
-            dimensions.add(d);
-        }
-
-        return new ArrayList<>(dimensions);
+        Stream<TypedMap.Key> keys = Stream.concat(globalDimensions.stream(), dimensionKeys.stream());
+        return keys.map(key -> new Dimension().withName(key.name).withValue(String.valueOf(attributes.get(key))))
+            .distinct()
+            .sorted(Comparator.comparing(Dimension::getName))
+            .collect(Collectors.toList());
     }
 
+    /**
+     * Flatten the attributes in the context hierarchy to produce the full set of
+     * attributes which describe the environment in which measurements were taken.
+     * Parent attributes are overridden by child attributes with the same key.
+     *
+     * @param context the context used for recording measurements.
+     * @return the flattened attributes with parent values overriden by child.
+     */
+    private TypedMap flattenContextHierarchy(MetricRecorder.RecorderContext context) {
+        if (context.parent() == null) {
+            return context.attributes();
+        }
+
+        MetricRecorder.RecorderContext parent = context;
+        ImmutableTypedMap.Builder attributes = ImmutableTypedMap.Builder.from(TypedMap.empty());
+        Stack<MetricRecorder.RecorderContext> parents = new Stack<>();
+        while(parent != null) {
+            parents.push(parent);
+            parent = parent.parent();
+        }
+
+        //Add the all of the attributes starting with the oldest parent and progressing down the hierarchy. 
+        //If there are name conflicts between a parent and one of its children, this order will result in the 
+        //value from the parent being overridden. 
+        while(!parents.empty()) {
+            MetricRecorder.RecorderContext current = parents.pop();
+            current.attributes().forEach(entry -> attributes.add(entry.getKey(), entry.getValue()));
+        }
+
+        return attributes.build();
+    }
 }
