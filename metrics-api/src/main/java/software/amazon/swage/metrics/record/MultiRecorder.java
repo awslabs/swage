@@ -36,6 +36,17 @@ public class MultiRecorder extends MetricRecorder<MultiRecorder.MultiRecorderCon
             super(attributes);
             this.contexts = contexts;
         }
+
+        MultiRecorderContext(TypedMap attributes, List<MetricContext> contexts, MultiRecorder.MultiRecorderContext parent) {
+            super(attributes, parent);
+            this.contexts = contexts;
+        }
+
+        @Override
+        public MultiRecorderContext newChild(TypedMap attributes) {
+            List<MetricContext> childContexts = contexts.stream().map(context ->  context.newChild(attributes)).collect(Collectors.toList());
+            return new MultiRecorderContext(attributes, childContexts, this);
+        }
     }
 
     private final List<MetricRecorder<?>> recorders;

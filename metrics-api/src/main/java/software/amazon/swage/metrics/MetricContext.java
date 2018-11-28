@@ -5,7 +5,7 @@ import java.time.Instant;
 import software.amazon.swage.collection.TypedMap;
 
 /**
- * The context in which a measurement is taken. A {MetricContext} contains the parameters of
+ * A {MetricContext} and its parent hierarchy contain the attributes of
  * the environment in which a measurement is taken.
  * In the physical world, these might define the effective time and place;
  * in a computer system, they might define the host, request, function, task or
@@ -13,11 +13,9 @@ import software.amazon.swage.collection.TypedMap;
  * <p/>
  * A {MetricContext} is the primary interface used to record measurements.
  */
-// TODO: provide a childContext() mechanism?
 public interface MetricContext extends AutoCloseable {
     /**
-     * Returns the attributes and their values that identity the context in which measurements
-     * are being taken.
+     * Returns the attributes identify this context in relation to its parent.
      *
      * @return the Context attributes
      */
@@ -72,6 +70,23 @@ public interface MetricContext extends AutoCloseable {
     default void count(Metric label) {
         count(label, 1L);
     }
+
+    /**
+     * Create a child context from this instance which is differentiated by the supplied attributes.
+     * A child context can be used to add additional attributes as information about the environment is produced or discovered.
+     * For example, an application may create a child context for processing a request at the time that the request is received.
+     *
+     * @param attributes The attributes that identify the child context in relation to this instance.
+     * @return a new child context of this instance.
+     */
+    MetricContext newChild(TypedMap attributes);
+
+    /**
+     * Returns this instance's parent. The parent contains the attributes which
+     * describe the environment that this {MetricContext} was created from.
+     * @return The {MetricContext} that this instance was created from or null if no parent exists.
+     */
+    MetricContext parent();
 
     /**
      * Close this context, indicating that no more measurements will be taken.

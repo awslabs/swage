@@ -14,12 +14,15 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
+import com.amazonaws.services.cloudwatch.model.Dimension;
+import org.junit.Test;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.MetricContext;
+import software.amazon.swage.metrics.NullContext;
 import software.amazon.swage.metrics.StandardContext;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import org.junit.Test;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,15 +36,17 @@ import static org.junit.Assert.fail;
  */
 public class DimensionMapperTest {
     private static final Metric METRIC = Metric.define("FooMetric");
-    private static final String SERVICE_NAME = "FooService";
-    private static final String ID = UUID.randomUUID().toString();
-
+    private final String ID = UUID.randomUUID().toString();
+    private final String SERVICE_NAME = UUID.randomUUID().toString();
+    private final String OPERATION = UUID.randomUUID().toString();
+    private final String PROGRAM = UUID.randomUUID().toString();
+    private final String MARKETPLACE = UUID.randomUUID().toString();
 
     @Test
     public void no_mappings() throws Exception {
-        TypedMap context = ContextData.withId(ID)
-                                      .add(StandardContext.SERVICE, SERVICE_NAME)
-                                      .build();
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
+                .add(StandardContext.SERVICE, SERVICE_NAME)
+                .build());
 
         DimensionMapper mapper = new DimensionMapper.Builder().build();
 
@@ -51,9 +56,9 @@ public class DimensionMapperTest {
 
     @Test
     public void one_global() throws Exception {
-        TypedMap context = ContextData.withId(ID)
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
                                       .add(StandardContext.SERVICE, SERVICE_NAME)
-                                      .build();
+                                      .build());
 
         DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
@@ -67,7 +72,7 @@ public class DimensionMapperTest {
 
     @Test
     public void one_global_empty_context() throws Exception {
-        TypedMap context = TypedMap.empty();
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(TypedMap.empty());
 
         DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
@@ -81,9 +86,9 @@ public class DimensionMapperTest {
 
     @Test
     public void global_and_normal_dimensions_combine() throws Exception {
-        TypedMap context = ContextData.withId(ID)
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
                                       .add(StandardContext.SERVICE, SERVICE_NAME)
-                                      .build();
+                                      .build());
 
         DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
@@ -106,10 +111,10 @@ public class DimensionMapperTest {
 
         String operation = "doStuff";
 
-        TypedMap context = ContextData.withId(ID)
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
                                       .add(StandardContext.SERVICE, SERVICE_NAME)
                                       .add(StandardContext.OPERATION, operation)
-                                      .build();
+                                      .build());
 
         DimensionMapper mapper = new DimensionMapper.Builder()
                 .addMetric(metricA, Arrays.asList(StandardContext.SERVICE))
@@ -163,4 +168,93 @@ public class DimensionMapperTest {
         assertTrue("Dimension list is missing mapped ID dimension", seenC[1]);
     }
 
+    @Test
+    public void attributes_are_sorted() throws Exception {
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
+                .add(StandardContext.SERVICE, SERVICE_NAME)
+                .add(StandardContext.OPERATION, OPERATION)
+                .add(StandardContext.MARKETPLACE, MARKETPLACE)
+                .add(StandardContext.PROGRAM, PROGRAM)
+                .build());
+
+        DimensionMapper mapper = new DimensionMapper.Builder()
+                .addGlobalDimension(ContextData.ID)
+                .addMetric(METRIC, Arrays.asList(StandardContext.SERVICE,
+                        StandardContext.OPERATION,
+                        StandardContext.MARKETPLACE,
+                        StandardContext.PROGRAM))
+                .build();
+
+        Dimension expectedIdDimension = new Dimension().withName(ContextData.ID.name).withValue(ID);
+        Dimension expectedServiceDimension = new Dimension().withName(StandardContext.SERVICE.name).withValue(SERVICE_NAME);
+        Dimension expectedOperationDimension = new Dimension().withName(StandardContext.OPERATION.name).withValue(OPERATION);
+        Dimension expectedMarketplaceDimension = new Dimension().withName(StandardContext.MARKETPLACE.name).withValue(MARKETPLACE);
+        Dimension expectedProgramDimension = new Dimension().withName(StandardContext.PROGRAM.name).withValue(PROGRAM);
+        List<Dimension> expected = Arrays.asList(expectedIdDimension,
+                expectedMarketplaceDimension,
+                expectedOperationDimension,
+                expectedProgramDimension,
+                expectedServiceDimension);
+
+        List<Dimension> dims = mapper.getDimensions(METRIC, context);
+        assertEquals(expected, dims);
+    }
+
+    @Test
+    public void parent_and_child_attributes_combine() throws Exception {
+        String childId = UUID.randomUUID().toString();
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
+                                      .add(StandardContext.SERVICE, SERVICE_NAME)
+                                      .build());
+
+        MetricRecorder.RecorderContext childContext = context.newChild(ContextData.withId(childId)
+                .add(StandardContext.OPERATION, OPERATION)
+                .build());
+
+        DimensionMapper mapper = new DimensionMapper.Builder()
+                .addGlobalDimension(ContextData.ID)
+                .addMetric(METRIC, Arrays.asList(StandardContext.SERVICE, StandardContext.OPERATION))
+                .build();
+
+        Dimension expectedIdDimension = new Dimension().withName(ContextData.ID.name).withValue(childId);
+        Dimension expectedServiceDimension = new Dimension().withName(StandardContext.SERVICE.name).withValue(SERVICE_NAME);
+        Dimension expectedOperationDimension = new Dimension().withName(StandardContext.OPERATION.name).withValue(OPERATION);
+        List<Dimension> expected = Arrays.asList(expectedIdDimension,
+                expectedOperationDimension,
+                expectedServiceDimension);
+
+        List<Dimension> dims = mapper.getDimensions(METRIC, childContext);
+        assertEquals(expected, dims);
+    }
+
+    @Test
+    public void child_attributes_override_parent() throws Exception {
+        String childId = UUID.randomUUID().toString();
+        String childService = UUID.randomUUID().toString();
+        String childOperation = UUID.randomUUID().toString();
+        MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(ID)
+                                      .add(StandardContext.SERVICE, SERVICE_NAME)
+                                      .add(StandardContext.OPERATION, OPERATION)
+                                      .build());
+
+        MetricRecorder.RecorderContext childContext = context.newChild(ContextData.withId(childId)
+                .add(StandardContext.SERVICE, childService)
+                .add(StandardContext.OPERATION, childOperation)
+                .build());
+
+        DimensionMapper mapper = new DimensionMapper.Builder()
+                .addGlobalDimension(ContextData.ID)
+                .addMetric(METRIC, Arrays.asList(StandardContext.SERVICE, StandardContext.OPERATION))
+                .build();
+
+        Dimension expectedIdDimension = new Dimension().withName(ContextData.ID.name).withValue(childId);
+        Dimension expectedServiceDimension = new Dimension().withName(StandardContext.SERVICE.name).withValue(childService);
+        Dimension expectedOperationDimension = new Dimension().withName(StandardContext.OPERATION.name).withValue(childOperation);
+        List<Dimension> expected = Arrays.asList(expectedIdDimension,
+                expectedOperationDimension,
+                expectedServiceDimension);
+
+        List<Dimension> dims = mapper.getDimensions(METRIC, childContext);
+        assertEquals(expected, dims);
+    }
 }

@@ -14,12 +14,12 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import software.amazon.swage.collection.TypedMap;
-import software.amazon.swage.metrics.Metric;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.amazonaws.services.cloudwatch.model.StatisticSet;
+import software.amazon.swage.metrics.Metric;
+import software.amazon.swage.metrics.record.MetricRecorder;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ class MetricDataAggregator {
      * @param unit Unit for interpreting the value
      */
     public void add(
-            final TypedMap context,
+            final MetricRecorder.RecorderContext context,
             final Metric name,
             final double value,
             final StandardUnit unit)

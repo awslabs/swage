@@ -14,17 +14,6 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import java.time.Instant;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
@@ -38,6 +27,17 @@ import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.Unit;
 import software.amazon.swage.metrics.record.MetricRecorder;
+
+import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * MetricRecorder that sends all metric events to CloudWatch.
@@ -98,7 +98,6 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
                 .addGlobalDimension(ContextData.ID)
                 .build();
     }
-
 
     private final AmazonCloudWatch metricsClient;
     private final String namespace;
@@ -398,7 +397,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
         // event lost. Rather than having one timestamp apply to all, we just
         // drop the time information and use the timestamp of aggregation.
 
-        aggregator.add(context.attributes(),
+        aggregator.add(context,
                        label,
                        value.doubleValue(),
                        unitMapping.get(unit));
@@ -413,7 +412,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
             return;
         }
 
-        aggregator.add(context.attributes(),
+        aggregator.add(context,
                        label,
                        Long.valueOf(delta).doubleValue(),
                        StandardUnit.Count);

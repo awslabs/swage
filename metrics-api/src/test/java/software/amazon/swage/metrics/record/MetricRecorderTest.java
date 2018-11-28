@@ -15,16 +15,22 @@
 package software.amazon.swage.metrics.record;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertSame;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.mockito.ArgumentMatcher;
+import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
+import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
@@ -57,5 +63,48 @@ public class MetricRecorderTest {
         verify(recorder).record(eq(METRIC), eq(42L), eq(Unit.NONE), eq(timestamp), same(recorderContext));
         verify(recorder).count(eq(METRIC), eq(4L), same(recorderContext));
         verify(recorder).close(same(recorderContext));
+    }
+
+    @Test
+    public void recorderPassesParentHierarchyToImplementation() throws Exception {
+        TypedMap parentAttributes = ContextData.withId(UUID.randomUUID().toString()).build();
+        TypedMap childAttributes = ContextData.withId(UUID.randomUUID().toString()).build();
+        MetricRecorder.RecorderContext parentContext = new MetricRecorder.RecorderContext(parentAttributes);
+
+        MetricRecorder<MetricRecorder.RecorderContext> recorder = spy(new NullRecorder());
+        when(recorder.newRecorderContext(parentAttributes)).thenReturn(parentContext);
+
+        MetricContext parentRecorderContext = recorder.context(parentAttributes);
+        MetricContext context = parentRecorderContext.newChild(childAttributes);
+
+        MetricRecorder.RecorderContext expected = new MetricRecorder.RecorderContext(childAttributes, parentContext);
+
+        Instant timestamp = Instant.now();
+        context.record(METRIC, 42L, Unit.NONE, timestamp);
+        context.count(METRIC, 4L);
+        context.close();
+
+        verify(recorder).record(eq(METRIC), eq(42L), eq(Unit.NONE), eq(timestamp), argThat(equals(expected)));
+        verify(recorder).count(eq(METRIC), eq(4L), argThat(equals(expected)));
+        verify(recorder).close(argThat(equals(expected)));
+    }
+
+    public ArgumentMatcher<MetricRecorder.RecorderContext> equals(MetricRecorder.RecorderContext other) {
+        return new ArgumentMatcher<MetricRecorder.RecorderContext>() {
+            @Override
+            public boolean matches(MetricRecorder.RecorderContext context) {
+                return equals(context, other);
+            }
+
+            private boolean equals(MetricRecorder.RecorderContext context, MetricRecorder.RecorderContext other) {
+                if (context == null && other == null) {
+                    return true;
+                }
+                if (context == null || other == null) {
+                    return false;
+                }
+                return context.attributes().equals(other.attributes()) && equals(context.parent(), other.parent());
+            }
+        };
     }
 }
