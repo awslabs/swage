@@ -16,13 +16,8 @@ package software.amazon.swage.metrics;
 
 /**
  * A specific metric type.
- * Analogous to the name of a metric, constrained to valid values.
- *
- * Metric names are constrained to alpha-numeric strings of less than 250
- * characters.  Names are allowed to contain periods ('.'), colons (':'),
- * dashes ('-'), slashes ('/'), underscores ('_'), or at-symbols ('@') to
- * support organization/namespacing in downstream systems that filter solely on
- * a string name.
+ * Analogous to the name of a metric without constraint. Metric names may
+ * still be constrained by the MetricRecorder implementation.
  *
  * This class is final as there should be no need to add logic.
  * Metrics should be created as static constants, created via the define method.
@@ -37,10 +32,8 @@ public final class Metric {
     private final String name;
 
     private Metric(final String name) {
-        // Check that the given string is valid for use as a metric name.
-        // These constraints are taken from existing metrics backend systems.
-        if (name == null || !name.matches("[a-zA-Z0-9.:/_@\\-]{0,250}")) {
-            throw new IllegalArgumentException("Invalid metric name '"+name+"'");
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Metric name may not be blank");
         }
 
         this.name = name;
@@ -51,7 +44,9 @@ public final class Metric {
      * Metrics should be defined once for the lifetime of an application.
      * The name will be directly used in reporting and aggregation, so must be
      * be in an accepted format.
-     * Limited to 250 characters, restricted to A-Z, a-z, 0-9, and . : @ _ - or /
+     *
+     * <p>Names are unconstrained here, but they may still be constrained by
+     * the MetricRecorder implementation.</p>
      *
      * @param name The string to use for reporting and aggregating this Metric.
      * @return A new Metric object identified by the given name.

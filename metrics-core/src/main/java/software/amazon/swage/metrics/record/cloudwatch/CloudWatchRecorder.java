@@ -82,6 +82,9 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
     // Count of metric datum to batch together in one CloudWatch call
     private static final int BATCH_SIZE = 20;
 
+    // Maximum length of a CloudWatch metric name, inclusive.
+    private static final int MAX_NAME_LENGTH = 255;
+
     // How long to wait for graceful shutdown before axing the publish thread
     private static final long SHUTDOWN_TIMEOUT = 60 * 1000;
 
@@ -393,6 +396,11 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
             return;
         }
 
+        if (!isValid(label)) {
+            log.warn("Invalid metric name: '" + label + "'");
+            return;
+        }
+
         // Metric events will be aggregated, with the individual time of each
         // event lost. Rather than having one timestamp apply to all, we just
         // drop the time information and use the timestamp of aggregation.
@@ -480,4 +488,8 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
         metricsClient.putMetricData( request );
     }
 
+    static boolean isValid(final Metric label) {
+        final String str = label.toString();
+        return str.length() <= MAX_NAME_LENGTH;
+    }
 }

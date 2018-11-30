@@ -25,38 +25,30 @@ public class MetricTest {
      */
     @Test
     public void validation() throws Exception {
-
-        // A 'good' metric name
-        Metric.define("a_23.5lKJ/L99:at@se-wat");
-
-        // Not exhaustive, but hopefully representative
-        final String[] bads = {
-                "some bad name",
-                "no|pipes",
-                "also!nogood",
-                "#$%&'*"
+        final String[] goods = {
+                "snake_case_metric",
+                "camelCaseMetric",
+                "hyphenated-metric",
+                "spaced out metric",
+                "digits 0123456789",
+                "G\u00FCnther",
+                // All of the bad-idea characters that are allowed (and not above)
+                "\t\n!\"#$%&'()*+,./:;<=>?@[\\]^`{|}~",
+                " "
         };
+        for (String s : goods) {
+            Metric.define(s);
+        }
+
+        final String[] bads = { null, "" };
         for (String s : bads) {
             try {
                 // Bad name should throw exception
-                Metric.define(s);
+                Metric.define("");
             } catch (IllegalArgumentException expected) {
                 continue;
             }
             fail("Expected exception not thrown for bad name '"+s+"'");
         }
-
-        // An excessively long name
-        StringBuilder sb = new StringBuilder(255);
-        for (int i = 0; i < 255; i++) {
-            sb.append('a');
-        }
-        try {
-            Metric.define(sb.toString());
-        } catch (IllegalArgumentException expected) {
-            return;
-        }
-        fail("Expected exception not thrown for excessively long name");
-
     }
 }
