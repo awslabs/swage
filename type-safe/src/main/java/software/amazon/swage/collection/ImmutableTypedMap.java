@@ -150,7 +150,7 @@ public final class ImmutableTypedMap implements TypedMap {
         }
 
         public ImmutableTypedMap build() {
-            return new ImmutableTypedMap(dataMap);
+            return new ImmutableTypedMap(new IdentityHashMap<>(dataMap));
         }
     }
 

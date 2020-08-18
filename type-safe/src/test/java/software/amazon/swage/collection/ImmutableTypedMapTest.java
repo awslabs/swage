@@ -354,4 +354,23 @@ public class ImmutableTypedMapTest {
         assertFalse("forEachTyped hit an unexpected entry", seen[4]);
     }
 
+    @Test
+    public void testMultipleBuildsDontMutateInstances() {
+        final TypedMap.Key<String> strKey = TypedMap.key("TestId1", String.class);
+        final String foo = "FOO";
+        final String bar = "BAR";
+
+        ImmutableTypedMap.Builder builder = ImmutableTypedMap.Builder.with(strKey, foo);
+        TypedMap firstInstance = builder.build();
+        String originalValue = firstInstance.get(strKey);
+
+        assertEquals(foo, originalValue);
+
+        // Override existing key using the same builder
+        TypedMap secondInstance = builder.add(strKey, bar).build();
+
+        // first instance should not be mutated
+        assertEquals(originalValue, firstInstance.get(strKey));
+        assertEquals(bar, secondInstance.get(strKey));
+    }
 }
