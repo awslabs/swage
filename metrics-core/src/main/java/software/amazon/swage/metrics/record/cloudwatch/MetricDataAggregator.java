@@ -27,7 +27,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Aggregates metric values into {@link StatisticSet}s, constructing a list of
@@ -42,9 +45,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * aggregation of metric data/MetricDatums.
  * <p>
  * Metrics are aggregated by namespace, metricName, attributes, and unit.
- * Matching metrics events will be added together to form a single
- * {@link StatisticSet}.
- * No aggregation across disparate dimensions is supported.
+ * Matching metrics events will be added together to form a single value. No
+ * aggregation across disparate dimensions is supported. Performance metrics
+ * (i.e. @link{MetricRecorder#record} was used) are not aggregated, preserving
+ * precise timestamps and allowing for percentile graphing/alarming.
+ * </p>
  * <p>
  * Dimensions to use for a metric are determined by a {@link DimensionMapper},
  * with values pulled from the current metric context.
@@ -54,13 +59,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class MetricDataAggregator {
 
-    private final ConcurrentHashMap<DatumKey, StatisticSet> statisticsMap;
     private final DimensionMapper dimensionMapper;
+    // (dimensions, metric, unit) -> [datum, ...]
+    // This queue is actually unbounded, so it never blocks on insert.
+    private final BlockingQueue<MetricDatum> records;
+    // (dimensions, metric, unit) -> (min, max, sum, count)
+    private final ConcurrentMap<DatumKey, StatisticSet> statisticsMap;
 
     public MetricDataAggregator(final DimensionMapper dimensionMapper)
     {
-        this.statisticsMap = new ConcurrentHashMap<>();
         this.dimensionMapper = dimensionMapper;
+        this.records = new LinkedBlockingQueue<>();
+        this.statisticsMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -74,24 +84,59 @@ class MetricDataAggregator {
      * @param value Recorded value for the metric event
      * @param unit Unit for interpreting the value
      */
-    public void add(
+    public void addAggregated(
             final MetricRecorder.RecorderContext context,
             final Metric name,
             final double value,
             final StandardUnit unit)
     {
         //TODO: avoid doing this every time for a context - caching, or?
-        List<Dimension> dimensions = dimensionMapper.getDimensions(name, context);
+        final List<Dimension> dimensions = dimensionMapper.getDimensions(name, context);
+        final DatumKey key = new DatumKey(dimensions, name.toString(), unit);
 
-        DatumKey key = new DatumKey(name.toString(), unit, dimensions);
-        statisticsMap.merge(
-                key,
-                new StatisticSet()
+        statisticsMap.compute(key, (entryKey, entryValue) -> {
+            if (entryValue == null) {
+                return new StatisticSet()
                         .withMaximum(value)
                         .withMinimum(value)
-                        .withSampleCount(1D)
-                        .withSum(value),
-                MetricDataAggregator::sum);
+                        .withSampleCount(1.0)
+                        .withSum(value);
+            }
+            // Otherwise update the old entry value.
+            if (entryValue.getMaximum() < value) {
+                entryValue.setMaximum(value);
+            } else {
+                entryValue.setMinimum(value);
+            }
+            return entryValue
+                    .withSampleCount(entryValue.getSampleCount() + 1.0)
+                    .withSum(entryValue.getSum() + value);
+        });
+    }
+
+    /**
+     * Add a metric event without aggregation.
+     * They are available via {@link #flush}.
+     *
+     * @param context Metric context to use for dimension information
+     * @param name Metric name
+     * @param value Recorded value for the metric event
+     * @param unit Unit for interpreting the value
+     * @param time Timestamp for the event
+     */
+    public void addRecording(
+            final TypedMap context,
+            final Metric name,
+            final double value,
+            final StandardUnit unit,
+            final Instant time)
+    {
+        //TODO: avoid doing this every time for a context - caching, or?
+        final List<Dimension> dimensions = dimensionMapper.getDimensions(name, context);
+        final DatumKey key = new DatumKey(dimensions, name.toString(), unit);
+
+        // Will always insert and return immediately since the queue is unbounded.
+        records.offer(key.toDatum().withTimestamp(Date.from(time)).withValue(value));
     }
 
     /**
@@ -108,7 +153,7 @@ class MetricDataAggregator {
      * @return list of all data aggregated since the last flush
      */
     public List<MetricDatum> flush() {
-        if (statisticsMap.size() == 0) {
+        if (statisticsMap.isEmpty() && records.isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -121,28 +166,31 @@ class MetricDataAggregator {
         // This is ok.  Any new keys will be picked up on subsequent flushes.
         //TODO: use two maps and swap between, to ensure 'perfect' segmentation?
         List<MetricDatum> metricData = new ArrayList<>();
+        final Date now = new Date();
         for (DatumKey key : statisticsMap.keySet()) {
             StatisticSet value = statisticsMap.remove(key);
+            if (value == null) {
+                // Somehow no longer in the map.
+                continue;
+            }
+
             //TODO: better to have no timestamp at all?
-            MetricDatum metricDatum = key.getDatum().withTimestamp(Date.from(Instant.now()))
-                                                    .withStatisticValues(value);
+            final MetricDatum metricDatum = key.toDatum().withTimestamp(now);
+            if (value.getSampleCount() == 1.0) {
+                // set the value field for a smaller data structure
+                metricDatum.setValue(value.getSum());
+            } else {
+                // set the statisticValues field instead
+                metricDatum.setStatisticValues(value);
+            }
+
             metricData.add(metricDatum);
         }
 
+        // This never blocks (esp. if the queue is empty).
+        records.drainTo(metricData);
+
         return metricData;
-    }
-
-
-    private static StatisticSet sum( StatisticSet v1, StatisticSet v2 ) {
-        //TODO: reuse one of the passed sets, and pollute a MetricDatum?
-        StatisticSet stats = new StatisticSet();
-
-        stats.setMaximum(Math.max(v1.getMaximum(), v2.getMaximum()));
-        stats.setMinimum(Math.min(v1.getMinimum(), v2.getMinimum()));
-        stats.setSampleCount(v1.getSampleCount() + v2.getSampleCount());
-        stats.setSum(v1.getSum() + v2.getSum());
-
-        return stats;
     }
 
     /**
@@ -160,21 +208,19 @@ class MetricDataAggregator {
         private final List<Dimension> dimensions;
 
         public DatumKey(
+                final List<Dimension> dimensions,
                 final String name,
-                final StandardUnit unit,
-                final List<Dimension> dimensions)
-        {
+                final StandardUnit unit) {
             this.name = name;
             this.unit = unit;
             this.dimensions = dimensions;
         }
 
-        public MetricDatum getDatum() {
-            MetricDatum md = new MetricDatum();
-            md.setMetricName(name);
-            md.setUnit(unit);
-            md.setDimensions(dimensions);
-            return md;
+        public MetricDatum toDatum() {
+            return new MetricDatum()
+                    .withDimensions(dimensions)
+                    .withMetricName(name)
+                    .withUnit(unit);
         }
 
         @Override
@@ -196,5 +242,4 @@ class MetricDataAggregator {
             return Objects.hash(name, unit, dimensions);
         }
     }
-
 }

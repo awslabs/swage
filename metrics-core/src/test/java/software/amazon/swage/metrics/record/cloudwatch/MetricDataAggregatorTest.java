@@ -22,9 +22,11 @@ import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.record.MetricRecorder;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -49,23 +51,19 @@ public class MetricDataAggregatorTest {
         final MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(UUID.randomUUID().toString()).build());
 
         MetricDataAggregator aggregator = new MetricDataAggregator(mapper);
-        aggregator.add(context, name, value, unit);
+        aggregator.addAggregated(context, name, value, unit);
 
         List<MetricDatum> ags = aggregator.flush();
 
         assertEquals("One metric datum should aggregate to one entry", 1, ags.size());
         assertEquals("Metric datum has wrong name", name.toString(), ags.get(0).getMetricName());
-        assertEquals("Metric datum has wrong unit", unit.toString(), ags.get(0).getUnit());
+        assertEquals("Metric datum has wrong unit", unit, getUnit(ags.get(0)));
 
-        StatisticSet stats = ags.get(0).getStatisticValues();
-        assertEquals("Metric datum has wrong stats value", Double.valueOf(value), stats.getSum());
-        assertEquals("Metric datum has wrong stats value", Double.valueOf(value), stats.getMinimum());
-        assertEquals("Metric datum has wrong stats value", Double.valueOf(value), stats.getMaximum());
-        assertEquals("Metric datum has wrong stats count", Double.valueOf(1), stats.getSampleCount());
+        assertEquals("Metric datum has wrong stats", makeStatistic(value),
+                getStatisticSet(ags.get(0)));
 
         assertTrue("Flush with no attributes was non-empty", aggregator.flush().isEmpty());
     }
-
 
     @Test
     public void non_aggregated() throws Exception {
@@ -81,13 +79,14 @@ public class MetricDataAggregatorTest {
 
         MetricDataAggregator aggregator = new MetricDataAggregator(mapper);
         for (int i=0; i<names.length; i++) {
-            aggregator.add(context, names[i], values[i], units[i]);
+            aggregator.addAggregated(context, names[i], values[i], units[i]);
         }
 
         List<MetricDatum> ags = aggregator.flush();
 
-        assertEquals("Metric attributes hs wrong size", names.length, ags.size());
+        assertEquals("Metric attributes has wrong size", names.length, ags.size());
         for (MetricDatum d : ags) {
+            // Find the index within [names] for this datum's metric.
             int i = 0;
             while (i < names.length && !names[i].toString().equals(d.getMetricName())) {
                 i++;
@@ -95,13 +94,10 @@ public class MetricDataAggregatorTest {
             assertTrue("Aggregated metrics had unexpected datum", i<names.length);
 
             assertEquals("Metric datum has wrong name", names[i].toString(), d.getMetricName());
-            assertEquals("Metric datum has wrong unit", units[i].toString(), d.getUnit());
+            assertEquals("Metric datum has wrong unit", units[i], getUnit(d));
 
-            StatisticSet stats = d.getStatisticValues();
-            assertEquals("Metric datum has wrong stats value", Double.valueOf(values[i]), stats.getSum());
-            assertEquals("Metric datum has wrong stats value", Double.valueOf(values[i]), stats.getMinimum());
-            assertEquals("Metric datum has wrong stats value", Double.valueOf(values[i]), stats.getMaximum());
-            assertEquals("Metric datum has wrong stats count", Double.valueOf(1), stats.getSampleCount());
+            assertEquals("Metric datum has wrong stats", makeStatistic(values[i]),
+                    getStatisticSet(d));
         }
 
         assertTrue("Flush with no attributes was non-empty", aggregator.flush().isEmpty());
@@ -113,8 +109,8 @@ public class MetricDataAggregatorTest {
                 .addGlobalDimension(ContextData.ID)
                 .build();
 
-        final Metric[] names = {D, A, B, A, D, D, D};
-        final double[] values = {42, 3.14, 6.28, 0, 9, 2, 4.1};
+        final Metric[] names  = { D,    A,    B, A, D, D, D, A};
+        final double[] values = {42, 3.14, 6.28, 0, 9, 2, 9, 0};
         final StandardUnit[] units = {
                 StandardUnit.Milliseconds,
                 StandardUnit.Seconds,
@@ -122,103 +118,112 @@ public class MetricDataAggregatorTest {
                 StandardUnit.Seconds,
                 StandardUnit.Milliseconds,
                 StandardUnit.Percent,
-                StandardUnit.Milliseconds};
+                StandardUnit.Milliseconds,
+                StandardUnit.Seconds};
 
         final MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(ContextData.withId(UUID.randomUUID().toString()).build());
 
         MetricDataAggregator aggregator = new MetricDataAggregator(mapper);
         for (int i=0; i<names.length; i++) {
-            aggregator.add(context, names[i], values[i], units[i]);
+            aggregator.addAggregated(context, names[i], values[i], units[i]);
         }
 
         List<MetricDatum> ags = aggregator.flush();
 
-        assertEquals("Metric attributes hs wrong size", 4, ags.size());
-        boolean[] seen = {false, false, false, false};
+        assertEquals("Metric attributes has wrong size", 4, ags.size());
+        int[] seen = {0, 0, 0, 0};
+        int[] expectedSeen = {1, 1, 1, 1};
         for (MetricDatum d : ags) {
-            if (d.getMetricName().equals(A.toString()) && d.getUnit().equals(StandardUnit.Seconds.toString())) {
-                StatisticSet stats = d.getStatisticValues();
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(3.14+0), stats.getSum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(0), stats.getMinimum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(3.14), stats.getMaximum());
-                assertEquals("Aggregated metric has wrong stats count", Double.valueOf(2), stats.getSampleCount());
-                seen[0] = true;
+            final StatisticSet stats = getStatisticSet(d);
+
+            if (d.getMetricName().equals(A.toString()) && getUnit(d) == StandardUnit.Seconds) {
+                final StatisticSet exp = makeStatistic(0, 3.14, 3.14, 3);
+
+                assertEquals(exp, stats);
+                seen[0]++;
             }
-            else if (d.getMetricName().equals(B.toString()) && d.getUnit().equals(StandardUnit.Terabits.toString())) {
-                StatisticSet stats = d.getStatisticValues();
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(6.28), stats.getSum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(6.28), stats.getMinimum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(6.28), stats.getMaximum());
-                assertEquals("Aggregated metric has wrong stats count", Double.valueOf(1), stats.getSampleCount());
-                seen[1] = true;
+            else if (d.getMetricName().equals(B.toString()) && getUnit(d) == StandardUnit.Terabits) {
+                final StatisticSet exp = makeStatistic(6.28);
+                assertEquals(exp, stats);
+                seen[1]++;
             }
-            else if (d.getMetricName().equals(D.toString()) && d.getUnit().equals(StandardUnit.Milliseconds.toString())) {
-                StatisticSet stats = d.getStatisticValues();
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(42+9+4.1), stats.getSum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(4.1), stats.getMinimum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(42), stats.getMaximum());
-                assertEquals("Aggregated metric has wrong stats count", Double.valueOf(3), stats.getSampleCount());
-                seen[2] = true;
+            else if (d.getMetricName().equals(D.toString()) && getUnit(d) == StandardUnit.Milliseconds) {
+                final StatisticSet exp = makeStatistic(9.0, 42.0, 60.0, 3);
+
+                assertEquals(exp, stats);
+                seen[2]++;
             }
-            else if (d.getMetricName().equals(D.toString()) && d.getUnit().equals(StandardUnit.Percent.toString())) {
-                StatisticSet stats = d.getStatisticValues();
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(2), stats.getSum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(2), stats.getMinimum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(2), stats.getMaximum());
-                assertEquals("Aggregated metric has wrong stats count", Double.valueOf(1), stats.getSampleCount());
-                seen[3] = true;
+            else if (d.getMetricName().equals(D.toString()) && getUnit(d) == StandardUnit.Percent) {
+                final StatisticSet exp = makeStatistic(2.0);
+                assertEquals(exp, stats);
+                seen[3]++;
             }
             else {
                 fail("Unexpected metric returned in aggregated set");
             }
         }
-        for (int i=0; i<seen.length; i++) {
-            assertTrue("Expected aggregated metric not seen", seen[i]);
-        }
+        assertArrayEquals("Metric-seen counts don't match", expectedSeen, seen);
 
         assertTrue("Flush with no attributes was non-empty", aggregator.flush().isEmpty());
 
-        // Now add more attributes, but let's just do two this time
+        // Now add more attributes, but let's just do two this time.
+        // These will aggregate:
         for (int i=0; i<5; i++) {
-            aggregator.add(context, A, i, StandardUnit.Count);
+            aggregator.addAggregated(context, A, 1, StandardUnit.Count);
         }
         Metric other = Metric.define("Other");
-        double osum = 0;
+        // These will not:
         for (int i=0; i<12; i++) {
-            osum += 0.01*i;
-            aggregator.add(context, other, 0.01*i, StandardUnit.Terabits);
+            // Uses a value that is representable in base 2, so multiplication isn't lossy:
+            aggregator.addRecording(context, other, 3.0 / 16.0, StandardUnit.Terabits,
+                    Instant.now());
         }
 
         ags = aggregator.flush();
 
-        assertEquals("Metric attributes hs wrong size", 2, ags.size());
+        assertEquals("Metric attributes has wrong size", 1 + 12, ags.size());
         boolean seenA = false;
-        boolean seenO = false;
+        int seenO = 0;
         for (MetricDatum d : ags) {
-            if (d.getMetricName().equals(A.toString()) && d.getUnit().equals(StandardUnit.Count.toString())) {
-                StatisticSet stats = d.getStatisticValues();
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(0+1+2+3+4), stats.getSum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(0), stats.getMinimum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(4), stats.getMaximum());
-                assertEquals("Aggregated metric has wrong stats count", Double.valueOf(5), stats.getSampleCount());
+            if (d.getMetricName().equals(A.toString()) && getUnit(d) == StandardUnit.Count) {
+                final StatisticSet exp = makeStatistic(1.0, 1.0, 5.0, 5);
+                assertEquals(exp, getStatisticSet(d));
                 seenA = true;
             }
-            else if (d.getMetricName().equals(other.toString()) && d.getUnit().equals(StandardUnit.Terabits.toString())) {
-                StatisticSet stats = d.getStatisticValues();
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(osum), stats.getSum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(0), stats.getMinimum());
-                assertEquals("Aggregated metric has wrong stats value", Double.valueOf(0.11), stats.getMaximum());
-                assertEquals("Aggregated metric has wrong stats count", Double.valueOf(12), stats.getSampleCount());
-                seenO = true;
+            else if (d.getMetricName().equals(other.toString()) && getUnit(d) == StandardUnit.Terabits) {
+                final StatisticSet exp = makeStatistic(3.0 / 16.0);
+                assertEquals(exp, getStatisticSet(d));
+                seenO++;
             }
             else {
                 fail("Unexpected metric returned in aggregated set");
             }
         }
-        assertTrue("Expected aggregated metric not seen", seenA);
-        assertTrue("Expected aggregated metric not seen", seenO);
+        assertTrue("Metric-seen count doesn't match", seenA);
+        assertEquals("Metric-seen count doesn't match", 12, seenO);
 
         assertTrue("Flush with no attributes was non-empty", aggregator.flush().isEmpty());
     }
 
+    private static StatisticSet getStatisticSet(final MetricDatum datum) {
+        final StatisticSet stats = datum.getStatisticValues();
+        return stats == null ? makeStatistic(datum.getValue()) : stats;
+    }
+
+    private static StandardUnit getUnit(final MetricDatum datum) {
+        return StandardUnit.fromValue(datum.getUnit());
+    }
+
+    private static StatisticSet makeStatistic(final double singleValue) {
+        return makeStatistic(singleValue, singleValue, singleValue, 1);
+    }
+
+    private static StatisticSet makeStatistic(final double min, final double max, final double sum,
+            final int count) {
+        return new StatisticSet()
+                .withMinimum(min)
+                .withMaximum(max)
+                .withSum(sum)
+                .withSampleCount((double) count);
+    }
 }
