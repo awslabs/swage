@@ -43,7 +43,7 @@ It lives in the thread-context module.
 
 The Disseminating Executors library solves the same basic problem as the Thread
 Context library, but with a different approach.  Ths library is intended to
-allow targetd state to cross thread boundaries without invasive changes at
+allow targeted state to cross thread boundaries without invasive changes at
 every execution point.  It uses custom task executors to capture and propagate
 state.
 
