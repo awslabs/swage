@@ -14,17 +14,17 @@
  */
 package software.amazon.swage.metrics;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class MetricTest {
+class MetricTest {
 
     /*
      * Test validation works as expected with new metrics.
      */
     @Test
-    public void validation() throws Exception {
+    void validation() throws Exception {
         final String[] goods = {
                 "snake_case_metric",
                 "camelCaseMetric",

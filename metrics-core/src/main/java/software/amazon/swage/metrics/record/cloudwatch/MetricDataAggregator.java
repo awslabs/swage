@@ -14,17 +14,16 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
+import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.record.MetricRecorder;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,11 +85,12 @@ class MetricDataAggregator {
         DatumKey key = new DatumKey(name.toString(), unit, dimensions);
         statisticsMap.merge(
                 key,
-                new StatisticSet()
-                        .withMaximum(value)
-                        .withMinimum(value)
-                        .withSampleCount(1D)
-                        .withSum(value),
+                StatisticSet.builder()
+                        .maximum(value)
+                        .minimum(value)
+                        .sampleCount(1D)
+                        .sum(value)
+                        .build(),
                 MetricDataAggregator::sum);
     }
 
@@ -124,8 +124,10 @@ class MetricDataAggregator {
         for (DatumKey key : statisticsMap.keySet()) {
             StatisticSet value = statisticsMap.remove(key);
             //TODO: better to have no timestamp at all?
-            MetricDatum metricDatum = key.getDatum().withTimestamp(Date.from(Instant.now()))
-                                                    .withStatisticValues(value);
+            MetricDatum metricDatum = key.getDatum().toBuilder()
+                    .timestamp(Instant.now())
+                    .statisticValues(value)
+                    .build();
             metricData.add(metricDatum);
         }
 
@@ -135,14 +137,12 @@ class MetricDataAggregator {
 
     private static StatisticSet sum( StatisticSet v1, StatisticSet v2 ) {
         //TODO: reuse one of the passed sets, and pollute a MetricDatum?
-        StatisticSet stats = new StatisticSet();
-
-        stats.setMaximum(Math.max(v1.getMaximum(), v2.getMaximum()));
-        stats.setMinimum(Math.min(v1.getMinimum(), v2.getMinimum()));
-        stats.setSampleCount(v1.getSampleCount() + v2.getSampleCount());
-        stats.setSum(v1.getSum() + v2.getSum());
-
-        return stats;
+        return StatisticSet.builder()
+                .maximum(Math.max(v1.maximum(), v2.maximum()))
+                .minimum(Math.min(v1.minimum(), v2.minimum()))
+                .sampleCount(v1.sampleCount() + v2.sampleCount())
+                .sum(v1.sum() + v2.sum())
+                .build();
     }
 
     /**
@@ -170,11 +170,11 @@ class MetricDataAggregator {
         }
 
         public MetricDatum getDatum() {
-            MetricDatum md = new MetricDatum();
-            md.setMetricName(name);
-            md.setUnit(unit);
-            md.setDimensions(dimensions);
-            return md;
+            return MetricDatum.builder()
+                    .metricName(name)
+                    .unit(unit)
+                    .dimensions(dimensions)
+                    .build();
         }
 
         @Override

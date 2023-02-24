@@ -102,7 +102,7 @@ public final class StateCapture {
      * If the passed in executor service is already decorated, or there are no registered
      * state captors, the delegate executor service is returned unmodified.
      *
-     * @param executor executor service to delegate execution to
+     * @param executorService executor service to delegate execution to
      * @return an executor service that wraps Runnables / Callables
      */
     public static ExecutorService capturingDecorator(final ExecutorService executorService) {

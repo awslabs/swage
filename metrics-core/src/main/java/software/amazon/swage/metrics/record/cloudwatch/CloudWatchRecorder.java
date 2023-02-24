@@ -14,14 +14,12 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
+import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
@@ -102,7 +100,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
                 .build();
     }
 
-    private final AmazonCloudWatch metricsClient;
+    private final CloudWatchAsyncClient metricsClient;
     private final String namespace;
 
     private final ScheduledExecutorService publishExecutor;
@@ -113,7 +111,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
     public static final class Builder {
         private String namespace;
         private boolean autoShutdown = false;
-        private AmazonCloudWatch client;
+        private CloudWatchAsyncClient client;
         private DimensionMapper dimensionMapper = DEFAULT_DIMENSIONS;
         private int maxJitter = DEFAULT_JITTER;
         private int publishFrequency = DEFAULT_PUBLISH_FREQ;
@@ -129,7 +127,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
             return this;
         }
 
-        public Builder client(AmazonCloudWatch client) {
+        public Builder client(CloudWatchAsyncClient client) {
             this.client = client;
             return this;
         }
@@ -159,7 +157,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
                 scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
             }
             if (client == null) {
-                client = AmazonCloudWatchClientBuilder.defaultClient();
+                client = CloudWatchAsyncClient.create();
             }
             CloudWatchRecorder recorder = new CloudWatchRecorder(
                     client,
@@ -237,7 +235,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      * @param namespace CloudWatch namespace to publish under
      */
     public CloudWatchRecorder(
-            final AmazonCloudWatch client,
+            final CloudWatchAsyncClient client,
             final String namespace)
     {
         this(client, namespace, DEFAULT_JITTER, DEFAULT_PUBLISH_FREQ, DEFAULT_DIMENSIONS);
@@ -265,7 +263,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      *                        to CloudWatch for each metric event.
      */
     public CloudWatchRecorder(
-            final AmazonCloudWatch client,
+            final CloudWatchAsyncClient client,
             final String namespace,
             final int maxJitter,
             final int publishFrequency,
@@ -303,7 +301,7 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
      * @param scheduledExecutorService Executor to schedule metric publishing at a fixed rate.
      */
     public CloudWatchRecorder(
-            final AmazonCloudWatch client,
+            final CloudWatchAsyncClient client,
             final String namespace,
             final int maxJitter,
             final int publishFrequency,
@@ -423,38 +421,38 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
         aggregator.add(context,
                        label,
                        Long.valueOf(delta).doubleValue(),
-                       StandardUnit.Count);
+                       StandardUnit.COUNT);
     }
 
     //TODO: stop propagating new Unit abstractions everywhere
     private static final Map<Unit, StandardUnit> unitMapping = new HashMap<>();
     static {
-        unitMapping.put(Unit.SECOND, StandardUnit.Seconds);
-        unitMapping.put(Unit.MILLISECOND, StandardUnit.Milliseconds);
-        unitMapping.put(Unit.MICROSECOND, StandardUnit.Microseconds);
-        unitMapping.put(Unit.BYTE, StandardUnit.Bytes);
-        unitMapping.put(Unit.KILOBYTE, StandardUnit.Kilobytes);
-        unitMapping.put(Unit.MEGABYTE, StandardUnit.Megabytes);
-        unitMapping.put(Unit.GIGABYTE, StandardUnit.Gigabytes);
-        unitMapping.put(Unit.TERABYTE, StandardUnit.Terabytes);
-        unitMapping.put(Unit.BIT, StandardUnit.Bits);
-        unitMapping.put(Unit.KILOBIT, StandardUnit.Kilobits);
-        unitMapping.put(Unit.MEGABIT, StandardUnit.Megabits);
-        unitMapping.put(Unit.GIGABIT, StandardUnit.Gigabits);
-        unitMapping.put(Unit.TERABIT, StandardUnit.Terabits);
-        unitMapping.put(Unit.PERCENT, StandardUnit.Percent);
-        unitMapping.put(Unit.BYTE_PER_SEC, StandardUnit.BytesSecond);
-        unitMapping.put(Unit.KB_PER_SEC, StandardUnit.KilobytesSecond);
-        unitMapping.put(Unit.MB_PER_SEC, StandardUnit.MegabytesSecond);
-        unitMapping.put(Unit.GB_PER_SEC, StandardUnit.GigabytesSecond);
-        unitMapping.put(Unit.TB_PER_SEC, StandardUnit.TerabytesSecond);
-        unitMapping.put(Unit.BIT_PER_SEC, StandardUnit.BitsSecond);
-        unitMapping.put(Unit.KBIT_PER_SEC, StandardUnit.KilobitsSecond);
-        unitMapping.put(Unit.MBIT_PER_SEC, StandardUnit.MegabitsSecond);
-        unitMapping.put(Unit.GBIT_PER_SEC, StandardUnit.GigabitsSecond);
-        unitMapping.put(Unit.TBIT_PER_SEC, StandardUnit.TerabitsSecond);
-        unitMapping.put(Unit.PER_SEC, StandardUnit.CountSecond);
-        unitMapping.put(Unit.NONE, StandardUnit.None);
+        unitMapping.put(Unit.SECOND, StandardUnit.SECONDS);
+        unitMapping.put(Unit.MILLISECOND, StandardUnit.MILLISECONDS);
+        unitMapping.put(Unit.MICROSECOND, StandardUnit.MICROSECONDS);
+        unitMapping.put(Unit.BYTE, StandardUnit.BYTES);
+        unitMapping.put(Unit.KILOBYTE, StandardUnit.KILOBYTES);
+        unitMapping.put(Unit.MEGABYTE, StandardUnit.MEGABYTES);
+        unitMapping.put(Unit.GIGABYTE, StandardUnit.GIGABYTES);
+        unitMapping.put(Unit.TERABYTE, StandardUnit.TERABYTES);
+        unitMapping.put(Unit.BIT, StandardUnit.BITS);
+        unitMapping.put(Unit.KILOBIT, StandardUnit.KILOBITS);
+        unitMapping.put(Unit.MEGABIT, StandardUnit.MEGABITS);
+        unitMapping.put(Unit.GIGABIT, StandardUnit.GIGABITS);
+        unitMapping.put(Unit.TERABIT, StandardUnit.TERABITS);
+        unitMapping.put(Unit.PERCENT, StandardUnit.PERCENT);
+        unitMapping.put(Unit.BYTE_PER_SEC, StandardUnit.BYTES_SECOND);
+        unitMapping.put(Unit.KB_PER_SEC, StandardUnit.KILOBYTES_SECOND);
+        unitMapping.put(Unit.MB_PER_SEC, StandardUnit.MEGABYTES_SECOND);
+        unitMapping.put(Unit.GB_PER_SEC, StandardUnit.GIGABYTES_SECOND);
+        unitMapping.put(Unit.TB_PER_SEC, StandardUnit.TERABYTES_SECOND);
+        unitMapping.put(Unit.BIT_PER_SEC, StandardUnit.BITS_SECOND);
+        unitMapping.put(Unit.KBIT_PER_SEC, StandardUnit.KILOBITS_SECOND);
+        unitMapping.put(Unit.MBIT_PER_SEC, StandardUnit.MEGABITS_SECOND);
+        unitMapping.put(Unit.GBIT_PER_SEC, StandardUnit.GIGABITS_SECOND);
+        unitMapping.put(Unit.TBIT_PER_SEC, StandardUnit.TERABITS_SECOND);
+        unitMapping.put(Unit.PER_SEC, StandardUnit.COUNT_SECOND);
+        unitMapping.put(Unit.NONE, StandardUnit.NONE);
     }
 
     private void sendAggregatedData() {
@@ -482,10 +480,11 @@ public class CloudWatchRecorder extends MetricRecorder<MetricRecorder.RecorderCo
 
     //TODO: ensure "Each PutMetricData request is limited to 40 KB in size for HTTP POST requests."
     private void sendData( Collection<MetricDatum> metricData ) {
-        PutMetricDataRequest request = new PutMetricDataRequest();
-        request.setNamespace( namespace );
-        request.setMetricData( metricData );
-        metricsClient.putMetricData( request );
+        PutMetricDataRequest request = PutMetricDataRequest.builder()
+                .namespace(namespace)
+                .metricData(metricData)
+                .build();
+        metricsClient.putMetricData(request);
     }
 
     static boolean isValid(final Metric label) {

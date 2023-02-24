@@ -31,7 +31,7 @@ public interface CapturedState {
      * will be executed immediately, the execution of the wrapped thread
      * will be skipped, and the exception will then be the execution result.
      */
-    public void beforeThreadExecution();
+    void beforeThreadExecution();
 
     /**
      * In the context of a wrapped executing thread,
@@ -46,5 +46,5 @@ public interface CapturedState {
      * <code>beforeThreadExecution()</code> threw an exception, the behavior
      * is undefined.
      */
-    public void afterThreadExecution();
+    void afterThreadExecution();
 }

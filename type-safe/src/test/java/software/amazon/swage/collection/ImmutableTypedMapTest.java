@@ -14,7 +14,7 @@
  */
 package software.amazon.swage.collection;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.time.Instant;
@@ -24,16 +24,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ImmutableTypedMapTest {
+class ImmutableTypedMapTest {
 
     @Test
-    public void get_typesafe() throws Exception {
+    void get_typesafe() {
         final TypedMap.Key<String> ka = TypedMap.key("Key1", String.class);
         final TypedMap.Key<Integer> kb = TypedMap.key("Key2", Integer.class);
 
@@ -45,18 +45,18 @@ public class ImmutableTypedMapTest {
                 .add(kb, vb)
                 .build();
 
-        assertFalse("TypedMap instance is unexpectedly empty", data.isEmpty());
-        assertEquals("TypedMap instance has wrong size", 2, data.size());
-        assertTrue("TypedMap instance missing key", data.containsKey(ka));
-        assertTrue("TypedMap instance missing key", data.containsKey(kb));
-        assertTrue("TypedMap instance missing value", data.containsValue(va));
-        assertTrue("TypedMap instance missing value", data.containsValue(vb));
-        assertEquals("TypedMap instance has wrong value for key", va, data.get(ka));
-        assertEquals("TypedMap instance has wrong value for key", vb, data.get(kb));
+        assertFalse(data.isEmpty(), "TypedMap instance is unexpectedly empty");
+        assertEquals(2, data.size(), "TypedMap instance has wrong size");
+        assertTrue(data.containsKey(ka), "TypedMap instance missing key");
+        assertTrue(data.containsKey(kb), "TypedMap instance missing key");
+        assertTrue(data.containsValue(va), "TypedMap instance missing value");
+        assertTrue(data.containsValue(vb), "TypedMap instance missing value");
+        assertEquals(va, data.get(ka), "TypedMap instance has wrong value for key");
+        assertEquals(vb, data.get(kb), "TypedMap instance has wrong value for key");
     }
 
     @Test
-    public void no_entry() throws Exception {
+    void no_entry() {
         final TypedMap.Key<String> ka = TypedMap.key("Key1", String.class);
         final TypedMap.Key<Integer> kb = TypedMap.key("Key2", Integer.class);
 
@@ -65,47 +65,41 @@ public class ImmutableTypedMapTest {
                 .with(ka, va)
                 .build();
 
-        assertNull("Get on missing key failed to return null", data.get(kb));
-        assertEquals("getOptional on missing key returned a value", Optional.empty(), data.getOptional(kb));
+        assertNull(data.get(kb), "Get on missing key failed to return null");
+        assertEquals(Optional.empty(), data.getOptional(kb), "getOptional on missing key returned a value");
 
-        assertFalse("containsKey is true for unused key", data.containsKey(kb));
-        assertFalse("containsValue is true for non-existing value", data.containsValue("nope"));
+        assertFalse(data.containsKey(kb), "containsKey is true for unused key");
+        assertFalse(data.containsValue("nope"), "containsValue is true for non-existing value");
 
         // check the rest of the map is there
-        assertFalse("TypedMap instance is unexpectedly empty", data.isEmpty());
-        assertEquals("TypedMap instance has wrong size", 1, data.size());
-        assertTrue("TypedMap instance missing key", data.containsKey(ka));
-        assertTrue("TypedMap instance missing value", data.containsValue(va));
-        assertEquals("TypedMap instance has wrong value for key", va, data.get(ka));
-        assertEquals("TypedMap instance has wrong value for key", va, data.getOptional(ka).get());
+        assertFalse(data.isEmpty(), "TypedMap instance is unexpectedly empty");
+        assertEquals(1, data.size(), "TypedMap instance has wrong size");
+        assertTrue(data.containsKey(ka), "TypedMap instance missing key");
+        assertTrue(data.containsValue(va), "TypedMap instance missing value");
+        assertEquals(va, data.get(ka), "TypedMap instance has wrong value for key");
+        assertEquals(va, data.getOptional(ka).get(), "TypedMap instance has wrong value for key");
     }
 
     @Test
-    public void empty_constant() throws Exception {
+    void empty_constant() {
         final TypedMap.Key<Instant> key = TypedMap.key("Foo", Instant.class);
 
         TypedMap empty = TypedMap.EMPTY;
 
-        assertTrue("Empty map not empty", empty.isEmpty());
-        assertEquals("Empty map has non-zero size", 0, empty.size());
-        assertNull("Empty map has a value", empty.get(key));
-        assertFalse("Empty map contains a key", empty.containsKey(key));
-        assertFalse("Empty map contains a value", empty.containsValue("something"));
-        assertTrue("Empty map has non-empty key set", empty.keySet().isEmpty());
+        assertTrue(empty.isEmpty(), "Empty map not empty");
+        assertEquals(0, empty.size(), "Empty map has non-zero size");
+        assertNull(empty.get(key), "Empty map has a value");
+        assertFalse(empty.containsKey(key), "Empty map contains a key");
+        assertFalse(empty.containsValue("something"), "Empty map contains a value");
+        assertTrue(empty.keySet().isEmpty(), "Empty map has non-empty key set");
 
         Iterator<TypedMap.Entry> it = empty.iterator();
         assertFalse(it.hasNext());
-        try {
-            it.next();
-        } catch (NoSuchElementException e) {
-            //expected
-            return;
-        }
-        fail("Expected NoSuchElementException not thrown iterating on empty map");
+        assertThrows(NoSuchElementException.class, it::next);
     }
 
     @Test
-    public void keyset() throws Exception {
+    void keyset() throws Exception {
         final TypedMap.Key<Double> ka = TypedMap.key("Alpha", Double.class);
         final TypedMap.Key<String> kb = TypedMap.key("Beta", String.class);
         final TypedMap.Key<UUID> kc = TypedMap.key("Gamma", UUID.class);
@@ -124,15 +118,15 @@ public class ImmutableTypedMapTest {
                 .build();
 
         Set<TypedMap.Key> s = data.keySet();
-        assertEquals("Set of keys has wrong size", 4, s.size());
-        assertTrue("Set of keys is missing a key", s.contains(ka));
-        assertTrue("Set of keys is missing a key", s.contains(kb));
-        assertTrue("Set of keys is missing a key", s.contains(kc));
-        assertTrue("Set of keys is missing a key", s.contains(kd));
+        assertEquals(4, s.size(), "Set of keys has wrong size");
+        assertTrue(s.contains(ka), "Set of keys is missing a key");
+        assertTrue(s.contains(kb), "Set of keys is missing a key");
+        assertTrue(s.contains(kc), "Set of keys is missing a key");
+        assertTrue(s.contains(kd), "Set of keys is missing a key");
     }
 
     @Test
-    public void typedKeyset() throws Exception {
+    void typedKeyset() throws Exception {
         final TypedMap.Key<Double> ka = TypedMap.key("A", Double.class);
         final TypedMap.Key<String> kb = TypedMap.key("B", String.class);
         final TypedMap.Key<String> kc = TypedMap.key("C", String.class);
@@ -151,15 +145,15 @@ public class ImmutableTypedMapTest {
                 .build();
 
         Set<TypedMap.Key<String>> s = data.typedKeySet(String.class);
-        assertEquals("Typed set of keys has wrong size", 2, s.size());
-        assertFalse("Typed set of keys has unexpected member", s.contains(ka));
-        assertTrue("Typed set of keys is missing a key", s.contains(kb));
-        assertTrue("Typed set of keys is missing a key", s.contains(kc));
-        assertFalse("Typed set of keys has unexpected member", s.contains(kd));
+        assertEquals(2, s.size(), "Typed set of keys has wrong size");
+        assertFalse(s.contains(ka), "Typed set of keys has unexpected member");
+        assertTrue(s.contains(kb), "Typed set of keys is missing a key");
+        assertTrue(s.contains(kc), "Typed set of keys is missing a key");
+        assertFalse(s.contains(kd), "Typed set of keys has unexpected member");
     }
 
     @Test
-    public void iterator() throws Exception {
+    void iterator() throws Exception {
         final TypedMap.Key<Long> ka = TypedMap.key("1", Long.class);
         final TypedMap.Key<Short> kb = TypedMap.key("2", Short.class);
         final TypedMap.Key<BigInteger> kc = TypedMap.key("5", BigInteger.class);
@@ -192,25 +186,25 @@ public class ImmutableTypedMapTest {
                 seen_c = true;
             }
         }
-        assertEquals("Iterator iterated incorrect increments", 3, i);
-        assertTrue("Iterator missed an entry", seen_a);
-        assertTrue("Iterator missed an entry", seen_b);
-        assertTrue("Iterator missed an entry", seen_c);
+        assertEquals(3, i, "Iterator iterated incorrect increments");
+        assertTrue(seen_a, "Iterator missed an entry");
+        assertTrue(seen_b, "Iterator missed an entry");
+        assertTrue(seen_c, "Iterator missed an entry");
     }
 
-    @Test(expected=UnsupportedOperationException.class)
-    public void iterator_remove() throws Exception {
+    @Test
+    void iterator_remove() throws Exception {
         final TypedMap.Key<Long> ka = TypedMap.key("1", Long.class);
         final Long va = Long.valueOf(999999999);
 
         TypedMap data = ImmutableTypedMap.Builder.with(ka, va).build();
 
         Iterator<TypedMap.Entry> it = data.iterator();
-        it.remove();
+        assertThrows(UnsupportedOperationException.class, it::remove);
     }
 
     @Test
-    public void forEach() throws Exception {
+    void forEach() {
         final TypedMap.Key<Long> ka = TypedMap.key("1", Long.class);
         final TypedMap.Key<Short> kb = TypedMap.key("2", Short.class);
         final TypedMap.Key<BigInteger> kc = TypedMap.key("5", BigInteger.class);
@@ -242,14 +236,14 @@ public class ImmutableTypedMapTest {
                 seen[3] = true;
             }
         });
-        assertTrue("forEach missed an entry", seen[0]);
-        assertTrue("forEach missed an entry", seen[1]);
-        assertTrue("forEach missed an entry", seen[2]);
-        assertFalse("forEach hit an unexpected entry", seen[3]);
+        assertTrue(seen[0], "forEach missed an entry");
+        assertTrue(seen[1], "forEach missed an entry");
+        assertTrue(seen[2], "forEach missed an entry");
+        assertFalse(seen[3], "forEach hit an unexpected entry");
     }
 
     @Test
-    public void typedIterator() throws Exception {
+    void typedIterator() {
         final TypedMap.Key<String> ka = TypedMap.key("y", String.class);
         final TypedMap.Key<Object> kb = TypedMap.key("n", Object.class);
         final TypedMap.Key<String> kc = TypedMap.key("m", String.class);
@@ -287,26 +281,26 @@ public class ImmutableTypedMapTest {
                 seen_c = true;
             }
         }
-        assertEquals("Iterator iterated incorrect increments", 2, i);
-        assertTrue("Typed iterator missed an entry", seen_a);
-        assertFalse("Typed iterator returned an entry of wrong type", seen_b);
-        assertTrue("Typed iterator missed an entry", seen_c);
+        assertEquals(2, i, "Iterator iterated incorrect increments");
+        assertTrue(seen_a, "Typed iterator missed an entry");
+        assertFalse(seen_b, "Typed iterator returned an entry of wrong type");
+        assertTrue(seen_c, "Typed iterator missed an entry");
     }
 
-    @Test(expected=UnsupportedOperationException.class)
-    public void typedIterator_remove() throws Exception {
+    @Test
+    void typedIterator_remove() {
         final TypedMap.Key<String> ka = TypedMap.key("y", String.class);
         final String va = "yes";
 
         TypedMap data = ImmutableTypedMap.Builder.with(ka, va).build();
 
         Iterator<TypedMap.Entry<String>> it = data.typedIterator(String.class);
-        it.remove();
+        assertThrows(UnsupportedOperationException.class, it::remove);
     }
 
 
     @Test
-    public void forEachTyped() throws Exception {
+    void forEachTyped() {
         final TypedMap.Key<String> ka = TypedMap.key("y", String.class);
         final TypedMap.Key<Object> kb = TypedMap.key("n", Object.class);
         final TypedMap.Key<String> kc = TypedMap.key("m", String.class);
@@ -347,15 +341,15 @@ public class ImmutableTypedMapTest {
             }
         });
 
-        assertTrue("forEachTyped missed an entry", seen[0]);
-        assertFalse("forEachTyped hit an unexpected entry", seen[1]);
-        assertTrue("forEachTyped missed an entry", seen[2]);
-        assertFalse("forEachTyped hit an unexpected entry", seen[3]);
-        assertFalse("forEachTyped hit an unexpected entry", seen[4]);
+        assertTrue(seen[0], "forEachTyped missed an entry");
+        assertFalse(seen[1], "forEachTyped hit an unexpected entry");
+        assertTrue(seen[2], "forEachTyped missed an entry");
+        assertFalse(seen[3], "forEachTyped hit an unexpected entry");
+        assertFalse(seen[4], "forEachTyped hit an unexpected entry");
     }
 
     @Test
-    public void testMultipleBuildsDontMutateInstances() {
+    void testMultipleBuildsDontMutateInstances() {
         final TypedMap.Key<String> strKey = TypedMap.key("TestId1", String.class);
         final String foo = "FOO";
         final String bar = "BAR";

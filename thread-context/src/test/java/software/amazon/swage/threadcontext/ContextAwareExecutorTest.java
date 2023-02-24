@@ -14,16 +14,16 @@
  */
 package software.amazon.swage.threadcontext;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
-public class ContextAwareExecutorTest {
+class ContextAwareExecutorTest {
     private static final ThreadContext.Key<String> KEY = ThreadContext.key(String.class);
     private static final Executor executor = new ContextAwareExecutor(Executors.newSingleThreadExecutor());
 
@@ -37,7 +37,7 @@ public class ContextAwareExecutorTest {
     };
 
     @Test
-    public void currentContextIsPropagatedToTask() throws Exception {
+    void currentContextIsPropagatedToTask() throws Exception {
         ThreadContext context = ThreadContext.emptyContext().with(KEY, "value");
         try (ThreadContext.CloseableContext ignored = context.open()) {
             executor.execute(captureTask);
@@ -47,7 +47,7 @@ public class ContextAwareExecutorTest {
     }
 
     @Test
-    public void withNoContextDefaultIsUsed() throws Exception {
+    void withNoContextDefaultIsUsed() throws Exception {
         executor.execute(captureTask);
         latch.await();
         assertSame(ThreadContext.emptyContext(), contextCapture.get());

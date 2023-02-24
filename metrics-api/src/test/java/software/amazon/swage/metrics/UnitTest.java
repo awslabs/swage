@@ -14,17 +14,17 @@
  */
 package software.amazon.swage.metrics;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for Units
  */
-public class UnitTest {
+class UnitTest {
 
     @Test
-    public void forSymbol() throws Exception {
+    void forSymbol() throws Exception {
         assertEquals(Unit.NONE, Unit.forSymbol(""));
         assertEquals(Unit.SECOND, Unit.forSymbol("s"));
         assertEquals(Unit.MILLISECOND, Unit.forSymbol("ms"));

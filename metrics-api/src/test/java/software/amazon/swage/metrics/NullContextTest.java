@@ -1,21 +1,21 @@
 package software.amazon.swage.metrics;
 
-import org.junit.Test;
-
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
 import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 
-public class NullContextTest {
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class NullContextTest {
 
     @Test
-    public void defaultContextHasNoAttributes() {
+    void defaultContextHasNoAttributes() {
         assertTrue(NullContext.empty().attributes().isEmpty());
     }
 
     @Test
-    public void nullContextCanHaveAttributes() {
+    void nullContextCanHaveAttributes() {
         TypedMap.Key<String> ID = TypedMap.key("ID", String.class);
         TypedMap attributes = ImmutableTypedMap.Builder.with(ID, "id").build();
         NullContext context = new NullContext(attributes);

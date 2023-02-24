@@ -3,22 +3,21 @@ package software.amazon.swage.metrics.record;
 import java.time.Instant;
 import java.util.Arrays;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
-import org.mockito.junit.MockitoJUnitRunner;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
-@RunWith(MockitoJUnitRunner.class)
-public class MultiRecorderTest {
+class MultiRecorderTest {
     private static final Metric METRIC = Metric.define("Metric");
 
     @Spy private NullRecorder delegate1;
@@ -29,13 +28,14 @@ public class MultiRecorderTest {
 
     private MultiRecorder recorder;
 
-    @Before
-    public void init() {
+    @BeforeEach
+    void init() {
+        MockitoAnnotations.openMocks(this);
         recorder = new MultiRecorder(Arrays.asList(delegate1, delegate2));
     }
 
     @Test
-    public void recordIsSentToAllDelegates() {
+    void recordIsSentToAllDelegates() {
         MetricContext context = recorder.context(attributes);
         context.record(METRIC, 42L, Unit.NONE, timestamp);
         verify(delegate1).record(eq(METRIC), eq(42L), eq(Unit.NONE), eq(timestamp), argThat(t -> attributes == t.attributes()));
@@ -43,7 +43,7 @@ public class MultiRecorderTest {
     }
 
     @Test
-    public void countIsSentToAllDelegates() {
+    void countIsSentToAllDelegates() {
         MetricContext context = recorder.context(attributes);
         context.count(METRIC, 42L);
         verify(delegate1).count(eq(METRIC), eq(42L), argThat(t -> attributes == t.attributes()));
@@ -51,7 +51,7 @@ public class MultiRecorderTest {
     }
 
     @Test
-    public void closeIsSentToAllDelegates() {
+    void closeIsSentToAllDelegates() {
         MetricContext context = recorder.context(attributes);
         context.close();
         verify(delegate1).close(argThat(t -> attributes == t.attributes()));

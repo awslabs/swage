@@ -14,50 +14,50 @@
  */
 package software.amazon.swage.threadcontext;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 
-public class ThreadContextTest {
+class ThreadContextTest {
 
     private static final ThreadContext.Key<String> REQUEST_ID = ThreadContext.key(String.class);
     private static final ThreadContext.Key<String> TRACE_ID = ThreadContext.key(String.class);
     private static final ThreadContext.Key<Double> HEIGHT = ThreadContext.key(Double.class);
 
     @Test
-    public void withNoActiveContextAnEmptyContextIsReturned() {
+    void withNoActiveContextAnEmptyContextIsReturned() {
         ThreadContext context = ThreadContext.current();
         assertSame(ThreadContext.emptyContext(), context);
     }
 
     @Test
-    public void contextReturnsValueForKey() {
+    void contextReturnsValueForKey() {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "hello");
         assertEquals("hello", REQUEST_ID.get(context));
     }
 
     @Test
-    public void contextReturnsNullForMissingKey() {
+    void contextReturnsNullForMissingKey() {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "hello");
         assertNull(TRACE_ID.get(context));
     }
 
     @Test
-    public void defaultIsSuppliedForMissingKey() {
+    void defaultIsSuppliedForMissingKey() {
         ThreadContext context = ThreadContext.emptyContext();
         assertEquals("hello", context.getOrElseGet(REQUEST_ID, () -> "hello"));
     }
 
     @Test
-    public void keyValuesAreAdditive() {
+    void keyValuesAreAdditive() {
         ThreadContext empty = ThreadContext.emptyContext();
         ThreadContext oneKey = empty.with(REQUEST_ID, "rid");
         ThreadContext twoKey = oneKey.with(TRACE_ID, "tid");
@@ -71,7 +71,7 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void keyValuesAreOverride() {
+    void keyValuesAreOverride() {
         ThreadContext oneKey = ThreadContext.emptyContext().with(REQUEST_ID, "rid1");
         ThreadContext overide = oneKey.with(REQUEST_ID, "rid2");
 
@@ -80,7 +80,7 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void multipleValuesCanBeAdded() {
+    void multipleValuesCanBeAdded() {
         Double h = Double.valueOf(3.14159);
 
         Map<ThreadContext.Key, Object> values = new HashMap<>();
@@ -95,14 +95,14 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void contextIsPassedToRunnable() {
+    void contextIsPassedToRunnable() {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "rid");
         context.wrap(() -> assertSame(context, ThreadContext.current())).run();
         assertSame(ThreadContext.emptyContext(), ThreadContext.current());
     }
 
     @Test
-    public void contextIsPassedToCallable() throws Exception {
+    void contextIsPassedToCallable() throws Exception {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "rid");
         String result = context.wrap((Callable<String>)() -> {
             assertSame(context, ThreadContext.current());
@@ -113,7 +113,7 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void contextIsPassedToSupplier() throws Exception {
+    void contextIsPassedToSupplier() {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "rid");
         String result = context.wrap((Supplier<String>)() -> {
             assertSame(context, ThreadContext.current());
@@ -124,7 +124,7 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void contextIsDetachedOnClose() {
+    void contextIsDetachedOnClose() {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "rid");
         try (ThreadContext.CloseableContext ignored = context.open()) {
             assertSame(context, ThreadContext.current());
@@ -133,7 +133,7 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void contextIsRestoredOnClose() {
+    void contextIsRestoredOnClose() {
         ThreadContext outer = ThreadContext.emptyContext().with(TRACE_ID, "tid");
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "rid");
         outer.wrap(() -> {
@@ -146,14 +146,14 @@ public class ThreadContextTest {
     }
 
     @Test
-    public void keyAccessesCurrentContext() {
+    void keyAccessesCurrentContext() {
         ThreadContext context = ThreadContext.emptyContext().with(REQUEST_ID, "rid");
         assertNull(REQUEST_ID.current());
         context.wrap(() -> assertEquals("rid", REQUEST_ID.current())).run();
     }
 
     @Test
-    public void wraperContextIsUsedEvenIfOuterContextExists() {
+    void wraperContextIsUsedEvenIfOuterContextExists() {
         ThreadContext outer = ThreadContext.emptyContext().with(REQUEST_ID, "rid1");
         ThreadContext inner = ThreadContext.emptyContext().with(REQUEST_ID, "rid2");
         Runnable wrapped = inner.wrap(() -> assertSame(inner, ThreadContext.current()));

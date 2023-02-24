@@ -14,18 +14,14 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.model.*;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
-import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
 import java.time.Instant;
@@ -41,7 +37,7 @@ import static org.mockito.Mockito.verify;
 
 /**
  */
-public class CloudWatchRecorderTest {
+class CloudWatchRecorderTest {
 
     private static final Metric M_TIME = Metric.define("Time");
     private static final Metric M_PERC = Metric.define("PercentSomething");
@@ -53,18 +49,18 @@ public class CloudWatchRecorderTest {
         private final String namespace;
         private final List<MetricDatum> metricData;
 
-        public RequestMatcher(String namespace, List<MetricDatum> metricData) {
+        RequestMatcher(String namespace, List<MetricDatum> metricData) {
             this.namespace = namespace;
             this.metricData = metricData;
         }
 
         @Override
         public boolean matches(final PutMetricDataRequest request) {
-            if (!request.getNamespace().equals(namespace)) {
+            if (!request.namespace().equals(namespace)) {
                 return false;
             }
 
-            List<MetricDatum> data = request.getMetricData();
+            List<MetricDatum> data = request.metricData();
             if (data.size() != metricData.size()) {
                 return false;
             }
@@ -73,7 +69,8 @@ public class CloudWatchRecorderTest {
             for (MetricDatum actual : data) {
                 for (MetricDatum expected : this.metricData) {
                     // Ignore timestamps and compare the rest of the datum
-                    if (actual.clone().withTimestamp(null).equals(expected.clone().withTimestamp(null))) {
+                    if (actual.toBuilder().timestamp(null).build()
+                            .equals(expected.toBuilder().timestamp(null).build())) {
                         matches.add(expected);
                     }
                 }
@@ -84,7 +81,7 @@ public class CloudWatchRecorderTest {
     }
 
     @Test
-    public void record_and_shutdown() throws Exception {
+    void record_and_shutdown() {
         final DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
                 .build();
@@ -95,7 +92,7 @@ public class CloudWatchRecorderTest {
         final TypedMap data = ContextData.withId(id).build();
         final double time = 123.45;
 
-        final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
+        final CloudWatchAsyncClient client = mock(CloudWatchAsyncClient.class);
 
         final CloudWatchRecorder recorder = new CloudWatchRecorder.Builder()
                 .client(client)
@@ -113,14 +110,14 @@ public class CloudWatchRecorderTest {
         recorder.shutdown();
 
         final List<MetricDatum> expected = new ArrayList<>(1);
-        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.Milliseconds));
+        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.MILLISECONDS));
 
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
 
 
     @Test
-    public void no_aggregation() throws Exception {
+    void no_aggregation() throws Exception {
         final DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
                 .build();
@@ -130,7 +127,7 @@ public class CloudWatchRecorderTest {
         final Integer time = Integer.valueOf(23);
         final Integer load = Integer.valueOf(87);
 
-        final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
+        final CloudWatchAsyncClient client = mock(CloudWatchAsyncClient.class);
 
         CloudWatchRecorder recorder = null;
         try {
@@ -160,15 +157,15 @@ public class CloudWatchRecorderTest {
         }
 
         final List<MetricDatum> expected = new ArrayList<>(2);
-        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.Milliseconds));
-        expected.add(makeDatum(id, M_PERC.toString(), load, load, load, 1, StandardUnit.Percent));
-        expected.add(makeDatum(id, M_FAIL.toString(), 1, 1, 1, 1, StandardUnit.Count));
+        expected.add(makeDatum(id, M_TIME.toString(), time, time, time, 1, StandardUnit.MILLISECONDS));
+        expected.add(makeDatum(id, M_PERC.toString(), load, load, load, 1, StandardUnit.PERCENT));
+        expected.add(makeDatum(id, M_FAIL.toString(), 1, 1, 1, 1, StandardUnit.COUNT));
 
         verify(client).putMetricData(argThat(new RequestMatcher(namespace, expected)));
     }
 
     @Test
-    public void aggregation() throws Exception {
+    void aggregation() throws Exception {
         final DimensionMapper mapper = new DimensionMapper.Builder()
                 .addGlobalDimension(ContextData.ID)
                 .build();
@@ -187,24 +184,24 @@ public class CloudWatchRecorderTest {
                                Arrays.stream(timeVals).min().getAsDouble(),
                                Arrays.stream(timeVals).max().getAsDouble(),
                                timeVals.length,
-                               StandardUnit.Milliseconds));
+                               StandardUnit.MILLISECONDS));
         expected.add(makeDatum(id,
                                M_PERC.toString(),
                                Arrays.stream(percVals).sum(),
                                Arrays.stream(percVals).min().getAsDouble(),
                                Arrays.stream(percVals).max().getAsDouble(),
                                percVals.length,
-                               StandardUnit.Percent));
+                               StandardUnit.PERCENT));
         expected.add(makeDatum(id,
                                M_FAIL.toString(),
                                Arrays.stream(failCnts).sum(),
                                Arrays.stream(failCnts).min().getAsInt(),
                                Arrays.stream(failCnts).max().getAsInt(),
                                failCnts.length,
-                               StandardUnit.Count));
+                               StandardUnit.COUNT));
 
 
-        final AmazonCloudWatch client = mock(AmazonCloudWatch.class);
+        final CloudWatchAsyncClient client = mock(CloudWatchAsyncClient.class);
 
         CloudWatchRecorder recorder = null;
         try {
@@ -250,22 +247,19 @@ public class CloudWatchRecorderTest {
             final int count,
             final StandardUnit unit)
     {
-        MetricDatum md = new MetricDatum().withMetricName(name).withUnit(unit);
-
-        final StatisticSet statSet = new StatisticSet()
-                .withSampleCount(Double.valueOf(count))
-                .withSum(sum)
-                .withMinimum(min)
-                .withMaximum(max);
-        md.setStatisticValues(statSet);
-
-        List<Dimension> dimensions = new ArrayList<>(1);
-        Dimension trace = new Dimension().withName(ContextData.ID.name).withValue(id);
-
-        dimensions.add(trace);
-        md.setDimensions(dimensions);
-
-        return md;
+        StatisticSet statSet = StatisticSet.builder()
+                .sampleCount(Double.valueOf(count))
+                .sum(sum)
+                .minimum(min)
+                .maximum(max)
+                .build();
+        Dimension trace = Dimension.builder().name(ContextData.ID.name).value(id).build();
+        return MetricDatum.builder()
+                .metricName(name)
+                .unit(unit)
+                .statisticValues(statSet)
+                .dimensions(trace)
+                .build();
     }
 
 

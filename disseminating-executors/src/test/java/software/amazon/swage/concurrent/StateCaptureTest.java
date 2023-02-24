@@ -14,8 +14,8 @@
  */
 package software.amazon.swage.concurrent;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -35,16 +35,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 /**
  * Verifies that captures work as expected
  */
-public class StateCaptureTest {
+class StateCaptureTest {
 
     @Test
-    public void testExecutorCaptures() throws InterruptedException {
+    void testExecutorCaptures() throws InterruptedException {
         // Setup
         ExecutorService e = Executors.newCachedThreadPool();
         Executor f = StateCapture.capturingDecorator(e);
@@ -60,7 +60,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testScheduledExecutorServiceCaptures() throws InterruptedException {
+    void testScheduledExecutorServiceCaptures() throws InterruptedException {
         // Setup
         ScheduledExecutorService e = Executors.newScheduledThreadPool(10);
         ScheduledExecutorService f = StateCapture.capturingDecorator(e);
@@ -76,7 +76,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testCompletionServiceRunnableCaptures() throws InterruptedException, Exception {
+    void testCompletionServiceRunnableCaptures() throws Exception {
         // Setup
         ExecutorService executor = Executors.newCachedThreadPool();
         CompletionService<Object> delegate = new ExecutorCompletionService<>(executor);
@@ -95,7 +95,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testCompletionServiceCallableCaptures() throws InterruptedException, Exception {
+    void testCompletionServiceCallableCaptures() throws Exception {
         // Setup
         ExecutorService executor = Executors.newCachedThreadPool();
         CompletionService<Object> delegate = new ExecutorCompletionService<>(executor);
@@ -114,7 +114,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testExecutorServiceInvokeAllCaptures() throws Exception {
+    void testExecutorServiceInvokeAllCaptures() throws Exception {
         testExecutorServiceCallables((f, mockCallable) -> {
             List<Future<Object>> results;
             try {
@@ -127,7 +127,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testExecutorServiceInvokeAllTimeoutCaptures() throws Exception {
+    void testExecutorServiceInvokeAllTimeoutCaptures() throws Exception {
         testExecutorServiceCallables((f, mockCallable) -> {
             final List<Future<Object>> results;
             try {
@@ -140,7 +140,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testExecutorServiceInvokeAnyCaptures() throws Exception {
+    void testExecutorServiceInvokeAnyCaptures() throws Exception {
         testExecutorServiceCallables((f, mockCallable) -> {
             try {
                 return CompletableFuture.completedFuture(
@@ -152,7 +152,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testExecutorServiceInvokeAnyTimeoutCaptures() throws Exception {
+    void testExecutorServiceInvokeAnyTimeoutCaptures() throws Exception {
         testExecutorServiceCallables((f, mockCallable) -> {
             try {
                 return CompletableFuture.completedFuture(
@@ -164,7 +164,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testExecutorServiceSubmitCallableCaptures() throws Exception {
+    void testExecutorServiceSubmitCallableCaptures() throws Exception {
         testExecutorServiceCallables((f, mockCallable) -> {
             try {
                 return f.submit(mockCallable);
@@ -176,7 +176,7 @@ public class StateCaptureTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testExecutorServiceSubmitRunnableCaptures() throws Exception {
+    void testExecutorServiceSubmitRunnableCaptures() throws Exception {
         testExecutorServiceRunnables((f, mockCallable) -> {
             try {
                 return (Future<Object>)f.submit(mockCallable);
@@ -187,7 +187,7 @@ public class StateCaptureTest {
     }
 
     @Test
-    public void testExecutorServiceSubmitRunnableResultCaptures() throws Exception {
+    void testExecutorServiceSubmitRunnableResultCaptures() throws Exception {
         testExecutorServiceRunnables((f, mockCallable) -> {
             try {
                 Object result = new Object();

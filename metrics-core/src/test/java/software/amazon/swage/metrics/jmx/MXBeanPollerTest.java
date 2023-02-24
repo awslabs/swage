@@ -20,10 +20,10 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
@@ -39,7 +39,7 @@ import software.amazon.swage.metrics.record.NullRecorder;
 
 /**
  */
-public class MXBeanPollerTest {
+class MXBeanPollerTest {
 
     // A matcher that checks the given TypedMap contains the minimal information
     // expected to be added by MXBeanPoller.
@@ -55,8 +55,8 @@ public class MXBeanPollerTest {
     }
 
     @Test
-    public void senses() throws Exception {
-        final MetricRecorder recorder = new NullRecorder();
+    void senses() throws Exception {
+        final MetricRecorder<?> recorder = new NullRecorder();
 
         final Sensor sensor1 = mock(Sensor.class);
         final Sensor sensor2 = mock(Sensor.class);
@@ -79,12 +79,12 @@ public class MXBeanPollerTest {
     }
 
     @Test
-    public void shutdown() throws Exception {
+    void shutdown() {
         final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
         MXBeanPoller poller = new MXBeanPoller(executor, new NullRecorder(), 5, Collections.emptyList());
         poller.shutdown();
 
-        assertTrue("Executor not shutdown on poller shutdown", executor.isShutdown());
+        assertTrue(executor.isShutdown(), "Executor not shutdown on poller shutdown");
     }
 }

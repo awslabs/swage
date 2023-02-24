@@ -14,7 +14,7 @@
  */
 package software.amazon.swage.metrics.record.file;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,8 +25,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.TimeZone;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for the RollingFileWriter.
@@ -58,19 +59,20 @@ public class RollingFileWriterTest {
                 .format(LocalDateTime.ofInstant(Instant.now().truncatedTo(ChronoUnit.MINUTES), tz.toZoneId()));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void nullDir() throws Exception {
-        new RollingFileWriter(null, "foo");
+    @Test
+    public void nullDir() {
+        assertThrows(IllegalArgumentException.class, () -> new RollingFileWriter(null, "foo"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void nullName() throws Exception {
-        new RollingFileWriter(testDir, null);
+    @Test
+    public void nullName() {
+        assertThrows(IllegalArgumentException.class, () -> new RollingFileWriter(testDir, null));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void nullZone() throws Exception {
-        new RollingFileWriter(testDir, "bar", null, false);
+    @Test
+    public void nullZone() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new RollingFileWriter(testDir, "bar", null, false));
     }
 
 

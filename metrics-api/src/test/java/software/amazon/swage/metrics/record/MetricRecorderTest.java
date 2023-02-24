@@ -17,9 +17,7 @@ package software.amazon.swage.metrics.record;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.junit.Test;
-
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -27,26 +25,26 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
-import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.MetricContext;
 import software.amazon.swage.metrics.Unit;
 
-public class MetricRecorderTest {
+class MetricRecorderTest {
     private static final Metric METRIC = Metric.define("Metric");
 
     @Test
-    public void recorderContextReturnsSuppliedAttributes() {
+    void recorderContextReturnsSuppliedAttributes() {
         TypedMap attributes = TypedMap.empty();
         MetricRecorder.RecorderContext context = new MetricRecorder.RecorderContext(attributes);
         assertSame(attributes, context.attributes());
     }
 
     @Test
-    public void recorderDelegatesToImplementation() throws Exception {
+    void recorderDelegatesToImplementation() {
         TypedMap attributes = TypedMap.empty();
         MetricRecorder.RecorderContext recorderContext = new MetricRecorder.RecorderContext(attributes);
 
@@ -66,7 +64,7 @@ public class MetricRecorderTest {
     }
 
     @Test
-    public void recorderPassesParentHierarchyToImplementation() throws Exception {
+    void recorderPassesParentHierarchyToImplementation() {
         TypedMap parentAttributes = ContextData.withId(UUID.randomUUID().toString()).build();
         TypedMap childAttributes = ContextData.withId(UUID.randomUUID().toString()).build();
         MetricRecorder.RecorderContext parentContext = new MetricRecorder.RecorderContext(parentAttributes);
@@ -89,7 +87,7 @@ public class MetricRecorderTest {
         verify(recorder).close(argThat(equals(expected)));
     }
 
-    public ArgumentMatcher<MetricRecorder.RecorderContext> equals(MetricRecorder.RecorderContext other) {
+    ArgumentMatcher<MetricRecorder.RecorderContext> equals(MetricRecorder.RecorderContext other) {
         return new ArgumentMatcher<MetricRecorder.RecorderContext>() {
             @Override
             public boolean matches(MetricRecorder.RecorderContext context) {

@@ -1,11 +1,11 @@
 package software.amazon.swage.metrics.record.file;
 
-import org.junit.Test;
 
+import org.junit.jupiter.api.Test;
 import software.amazon.swage.metrics.Metric;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FileRecorderTest {
     @Test
@@ -21,7 +21,7 @@ public class FileRecorderTest {
             "\t!\"#$%&'()*+./;<>?@[\\]^`{|}~" // no ',' ':' '\n'
         };
         for (final String s : good) {
-            assertTrue("valid name [" + s + "]", FileRecorder.isValid(Metric.define(s)));
+            assertTrue(FileRecorder.isValid(Metric.define(s)), "valid name [" + s + "]");
         }
 
         final String[] bad = {
@@ -32,7 +32,7 @@ public class FileRecorderTest {
             "metric=metric_name"
         };
         for (final String s : bad) {
-            assertFalse("invalid name [" + s + "]", FileRecorder.isValid(Metric.define(s)));
+            assertFalse(FileRecorder.isValid(Metric.define(s)), "invalid name [" + s + "]");
         }
     }
 }

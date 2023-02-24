@@ -40,5 +40,5 @@ public interface StateCaptor<T extends CapturedState> {
      * @return a CapturedState which will be called in the context of an
      * executing thread immediately before and after its execution.
      */
-    public T get();
+    T get();
 }

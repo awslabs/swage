@@ -14,9 +14,9 @@
  */
 package software.amazon.swage.metrics;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class StandardMetricTest {
+class StandardMetricTest {
 
     /*
      * Basic unit test to load the StandardMetric class and run validation on the
@@ -24,7 +24,7 @@ public class StandardMetricTest {
      * load/runtime.
      */
     @Test
-    public void validate() throws Exception {
+    void validate() {
         // Reference one member to force loading all static members.
         // Simpler than doing so explicitly ourselves.
         final Metric time = StandardMetric.TIME;

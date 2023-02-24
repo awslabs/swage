@@ -14,21 +14,13 @@
  */
 package software.amazon.swage.metrics.record.cloudwatch;
 
-import com.amazonaws.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.swage.collection.ImmutableTypedMap;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.Metric;
 import software.amazon.swage.metrics.record.MetricRecorder;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -146,9 +138,9 @@ public class DimensionMapper {
         }
 
         Stream<TypedMap.Key> keys = Stream.concat(globalDimensions.stream(), dimensionKeys.stream());
-        return keys.map(key -> new Dimension().withName(key.name).withValue(String.valueOf(attributes.get(key))))
+        return keys.map(key -> Dimension.builder().name(key.name).value(String.valueOf(attributes.get(key))).build())
             .distinct()
-            .sorted(Comparator.comparing(Dimension::getName))
+            .sorted(Comparator.comparing(Dimension::name))
             .collect(Collectors.toList());
     }
 

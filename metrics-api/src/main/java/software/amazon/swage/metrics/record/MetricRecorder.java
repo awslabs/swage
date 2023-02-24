@@ -233,7 +233,7 @@ public abstract class MetricRecorder<R extends MetricRecorder.RecorderContext> {
     protected void close(R context) {
     }
 
-    private final class DefaultMetricContext implements MetricContext {
+    private static final class DefaultMetricContext implements MetricContext {
         private final MetricRecorder recorder;
         private final RecorderContext context;
         private final MetricContext parent;
