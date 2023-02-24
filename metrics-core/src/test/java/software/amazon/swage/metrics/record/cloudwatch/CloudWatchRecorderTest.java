@@ -16,7 +16,11 @@ package software.amazon.swage.metrics.record.cloudwatch;
 
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
-import software.amazon.awssdk.services.cloudwatch.model.*;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
+import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
+import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
 import software.amazon.swage.collection.TypedMap;
 import software.amazon.swage.metrics.ContextData;
 import software.amazon.swage.metrics.Metric;
