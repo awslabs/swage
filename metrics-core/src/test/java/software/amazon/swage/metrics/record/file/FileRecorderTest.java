@@ -1,38 +1,38 @@
 package software.amazon.swage.metrics.record.file;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Test;
 import software.amazon.swage.metrics.Metric;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+class FileRecorderTest {
 
-public class FileRecorderTest {
     @Test
-    public void validation() {
+    void validation() {
         final String[] good = {
-            "snake_case_metric",
-            "camelCaseMetric",
-            "hyphenated-metric",
-            "spaced out metric",
-            "digits 0123456789",
-            "G\u00FCnther",
-            // All of the bad-idea characters that are allowed (and not above)
-            "\t!\"#$%&'()*+./;<>?@[\\]^`{|}~" // no ',' ':' '\n'
+                "snake_case_metric",
+                "camelCaseMetric",
+                "hyphenated-metric",
+                "spaced out metric",
+                "digits 0123456789",
+                "G\u00FCnther",
+                // All of the bad-idea characters that are allowed (and not above)
+                "\t!\"#$%&'()*+./;<>?@[\\]^`{|}~" // no ',' ':' '\n'
         };
         for (final String s : good) {
-            assertTrue("valid name [" + s + "]", FileRecorder.isValid(Metric.define(s)));
+            assertTrue(FileRecorder.isValid(Metric.define(s)), "valid name [" + s + "]");
         }
 
         final String[] bad = {
-            // Each case demonstrates one form of ambiguity:
-            "metric_name, dimension=value",
-            "metric_name:100ms:",
-            "metric_name\nmetric",
-            "metric=metric_name"
+                // Each case demonstrates one form of ambiguity:
+                "metric_name, dimension=value",
+                "metric_name:100ms:",
+                "metric_name\nmetric",
+                "metric=metric_name"
         };
         for (final String s : bad) {
-            assertFalse("invalid name [" + s + "]", FileRecorder.isValid(Metric.define(s)));
+            assertFalse(FileRecorder.isValid(Metric.define(s)), "invalid name [" + s + "]");
         }
     }
 }
