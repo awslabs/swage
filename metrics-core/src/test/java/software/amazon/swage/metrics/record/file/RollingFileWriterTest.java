@@ -14,7 +14,9 @@
  */
 package software.amazon.swage.metrics.record.file;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,21 +26,20 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.TimeZone;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the RollingFileWriter.
- *
- * Requires the "test.area" system property to be set, specifying directory
- * where temporary log files will be created.
- *
+ * <p>
+ * Requires the "test.area" system property to be set, specifying directory where temporary log
+ * files will be created.
+ * <p>
  * TODO: more/robust tests, you know, like actual log rolling
  */
-public class RollingFileWriterTest {
+class RollingFileWriterTest {
 
     private static final Path testDir;
+
     static {
         String testProp = System.getProperty("test.area");
         if (testProp == null || testProp.isEmpty()) {
@@ -50,32 +51,41 @@ public class RollingFileWriterTest {
     private String currentHourExt(TimeZone tz) {
         return DateTimeFormatter
                 .ofPattern(".yyyy-MM-dd-HH")
-                .format(LocalDateTime.ofInstant(Instant.now().truncatedTo(ChronoUnit.HOURS), tz.toZoneId()));
+                .format(LocalDateTime.ofInstant(Instant.now().truncatedTo(ChronoUnit.HOURS),
+                        tz.toZoneId()));
     }
+
     private String currentMinExt(TimeZone tz) {
         return DateTimeFormatter
                 .ofPattern(".yyyy-MM-dd-HH-mm")
-                .format(LocalDateTime.ofInstant(Instant.now().truncatedTo(ChronoUnit.MINUTES), tz.toZoneId()));
+                .format(LocalDateTime.ofInstant(Instant.now().truncatedTo(ChronoUnit.MINUTES),
+                        tz.toZoneId()));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void nullDir() throws Exception {
-        new RollingFileWriter(null, "foo");
+    @Test
+    void nullDir() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new RollingFileWriter(null, "foo");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void nullName() throws Exception {
-        new RollingFileWriter(testDir, null);
+    @Test
+    void nullName() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new RollingFileWriter(testDir, null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void nullZone() throws Exception {
-        new RollingFileWriter(testDir, "bar", null, false);
+    @Test
+    void nullZone() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new RollingFileWriter(testDir, "bar", null, false);
+        });
     }
 
 
     @Test
-    public void filenameUTC() throws Exception {
+    void filenameUTC() throws Exception {
         final String base = "test";
 
         // Current rolled file for the current hour
@@ -97,7 +107,7 @@ public class RollingFileWriterTest {
     }
 
     @Test
-    public void filenameLocalZone() throws Exception {
+    void filenameLocalZone() throws Exception {
         final TimeZone tz = TimeZone.getDefault();
         final String base = "what";
 
@@ -111,7 +121,7 @@ public class RollingFileWriterTest {
     }
 
     @Test
-    public void filenameMinute() throws Exception {
+    void filenameMinute() throws Exception {
         final TimeZone tz = TimeZone.getTimeZone("UTC");
         final String base = "mins";
 
@@ -126,16 +136,16 @@ public class RollingFileWriterTest {
         // Just in case minute rolled during test, check before and after minutes
         Path p = w.getCurrentFile();
         assertTrue(p.equals(expected) ||
-                   p.equals(testDir.resolve(base + currentMinExt(tz))));
+                p.equals(testDir.resolve(base + currentMinExt(tz))));
     }
 
     @Test
-    public void createDirectory() throws Exception {
+    void createDirectory() throws Exception {
         // Create a unique non-existent file path
         Path path;
         do {
-            path = testDir.resolve("a/b/"+System.currentTimeMillis());
-        } while(Files.exists(path));
+            path = testDir.resolve("a/b/" + System.currentTimeMillis());
+        } while (Files.exists(path));
 
         RollingFileWriter w = new RollingFileWriter(path, "test");
         w.write("stuff here");
